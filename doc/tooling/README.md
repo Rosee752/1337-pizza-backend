@@ -3,12 +3,25 @@ The following lists the tools and frameworks, that are used in the project.
 - [Docker](https://docs.docker.com/get-started/overview/)    
    Docker is an open platform for developing, shipping, and running applications. Docker enables you to separate your applications from your infrastructure so you can deliver software quickly. With Docker, you can manage your infrastructure in the same ways you manage your applications. By taking advantage of Docker's methodologies for shipping, testing, and deploying code, you can significantly reduce the delay between writing code and running it in production.
 - [Kubernetes](https://kubernetes.io/docs/concepts/overview/)
+   Kubernetes is a portable, extensible, open source platform for managing containerized workloads and services, that facilitates both declarative configuration and automation. It has a large, rapidly growing ecosystem. Kubernetes services, support, and tools are widely available.
 - [FastAPI](https://fastapi.tiangolo.com/tutorial/)
+   FastAPI is a modern, fast (high-performance), web framework for building APIs with Python based on standard Python type hints.
 - [SQLAlchemy](https://docs.sqlalchemy.org/en/20/orm/quickstart.html)
+    SQLAlchemy is the Python SQL toolkit and Object Relational Mapper that gives application developers the full power and flexibility of SQL.
+    It provides a full suite of well known enterprise-level persistence patterns, designed for efficient and high-performing database access, adapted into a simple and Pythonic domain language.
 - [FastAPI with SQLAlchemy](https://fastapi.tiangolo.com/tutorial/sql-databases/)
+    Integrating FastAPI with SQLAlchemy enables the creation of high-performance, scalable APIs with robust database interactions.
 - [Alembic](https://alembic.sqlalchemy.org/en/latest/tutorial.html)
+  Alembic is a database migrations tool written by the author of SQLAlchemy. A migrations tool offers the following functionality:
+  Can emit ALTER statements to a database in order to change the structure of tables and other constructs
+  Provides a system whereby "migration scripts" may be constructed; each script indicates a particular series of steps that can "upgrade" a target database to a new version, and optionally a series of steps that can "downgrade" similarly, doing the same steps in reverse.
+  Allows the scripts to execute in some sequential manner.
 - [Swagger UI](https://swagger.io/tools/swagger-ui/)
+    Swagger UI allows anyone — be it your development team or your end consumers — to visualize and interact with the API’s resources without having any of the implementation logic in place. It’s automatically generated from your OpenAPI (formerly known as Swagger) Specification, with the visual documentation making it easy for back end implementation and client side consumption.
 - [Ruff](https://github.com/astral-sh/ruff)
+    An extremely fast Python linter and code formatter, written in Rust.
+
+
 
 # GitLab CI/CD
 
