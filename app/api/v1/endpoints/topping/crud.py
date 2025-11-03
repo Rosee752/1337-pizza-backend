@@ -7,7 +7,7 @@ from app.database.models import Topping
 
 
 def create_topping(schema: ToppingCreateSchema, db: Session):
-    entity = Topping(**schema.dict())
+    entity = Topping(**schema.model_dump())
     db.add(entity)
     db.commit()
     return entity
@@ -36,7 +36,7 @@ def get_all_toppings(db: Session):
 
 
 def update_topping(topping: Topping, changed_topping: ToppingCreateSchema, db: Session):
-    for key, value in changed_topping.dict().items():
+    for key, value in changed_topping.model_dump().items():
         setattr(topping, key, value)
 
     db.commit()

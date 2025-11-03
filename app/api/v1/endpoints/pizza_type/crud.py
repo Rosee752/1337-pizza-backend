@@ -9,7 +9,7 @@ from app.database.models import PizzaType, PizzaTypeToppingQuantity
 
 
 def create_pizza_type(schema: PizzaTypeCreateSchema, db: Session):
-    entity = PizzaType(**schema.dict())
+    entity = PizzaType(**schema.model_dump())
     db.add(entity)
     db.commit()
     return entity
@@ -31,7 +31,7 @@ def get_all_pizza_types(db: Session):
 
 
 def update_pizza_type(pizza_type: PizzaType, changed_pizza_type: PizzaTypeCreateSchema, db: Session):
-    for key, value in changed_pizza_type.dict().items():
+    for key, value in changed_pizza_type.model_dump().items():
         setattr(pizza_type, key, value)
 
     db.commit()
@@ -51,7 +51,7 @@ def create_topping_quantity(
         schema: PizzaTypeToppingQuantityCreateSchema,
         db: Session,
 ):
-    entity = PizzaTypeToppingQuantity(**schema.dict())
+    entity = PizzaTypeToppingQuantity(**schema.model_dump())
     pizza_type.toppings.append(entity)
     db.commit()
     db.refresh(pizza_type)
