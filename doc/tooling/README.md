@@ -27,19 +27,19 @@ The following lists the tools and frameworks, that are used in the project.
 
 The following is a collection of short hints on how to do the most essential things in a GitLab CI/CD pipeline:
 
-- How to delay a job until another job is done: 
+- How to delay a job until another job is done: needs:[other_job]
 
-- How to change the image used in a task: 
+- How to change the image used in a task: image: your_image
     
-- How do you start a task manually:
+- How do you start a task manually: when: manual
 
-- The Script part of the config file - what is it good for?
+- The Script part of the config file - what is it good for? : diese section bestimmt was genau der job macht
 
-- If I want a task to run for every branch I put it into the stage ??
+- If I want a task to run for every branch I put it into the stage test
 
-- If I want a task to run for every merge request I put it into the stage ??
+- If I want a task to run for every merge request I put it into the stage test
 
-- If I want a task to run for every commit to the main branch I put it into the stage ??
+- If I want a task to run for every commit to the main branch I put it into the stage deploy
 
 # Ruff
 
