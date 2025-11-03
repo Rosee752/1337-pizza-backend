@@ -27,27 +27,47 @@ The following lists the tools and frameworks, that are used in the project.
 
 The following is a collection of short hints on how to do the most essential things in a GitLab CI/CD pipeline:
 
-- How to delay a job until another job is done: 
+- How to delay a job until another job is done: needs:[other_job]
 
-- How to change the image used in a task: 
+- How to change the image used in a task: image: your_image
     
-- How do you start a task manually:
+- How do you start a task manually: when: manual
 
-- The Script part of the config file - what is it good for?
+- The Script part of the config file - what is it good for? : diese section bestimmt was genau der job macht
 
-- If I want a task to run for every branch I put it into the stage ??
+- If I want a task to run for every branch I put it into the stage test
 
-- If I want a task to run for every merge request I put it into the stage ??
+- If I want a task to run for every merge request I put it into the stage test
 
-- If I want a task to run for every commit to the main branch I put it into the stage ??
+- If I want a task to run for every commit to the main branch I put it into the stage deploy
 
 # Ruff
 
-- What is the purpose of ruff?
+- What is the purpose of ruff:
+Ruff is an extremely fast Python linter and code formatter. Its purpose is to find errors in your code, enforce a consistent style, and automatically format your code, all from a single tool. It's written in Rust to be 10-100x faster than tools like Flake8, Black, and isort, which it is designed to replace.
 
-- What types of problems does it detect
 
-- Why should you use a tool like ruff in a serious project?
+- What types of problems does it detect: 
+
+As a linter, Ruff detects hundreds of different problems, which can be grouped into a few main categories:
+
+Logical Errors: Such as unused variables, undefined names, or code that can never be reached.
+
+Style Violations: Like lines that are too long, incorrect naming conventions, or improper spacing.
+
+Bad Practices: Including inefficient code patterns (e.g., unnecessary loops) and common "gotchas" that can lead to bugs.
+
+Import-Related Issues: It detects and can automatically fix unsorted or incorrectly grouped imports.
+
+- Why should you use a tool like ruff in a serious project? :
+
+There are three key reasons:
+
+Enforces Code Consistency: It guarantees that all code, no matter which developer wrote it, follows the same style. This ends debates about formatting and makes the code base significantly easier to read and maintain.
+
+Boosts Productivity (Speed): It runs almost instantly, giving developers immediate feedback instead of making them wait. This also makes CI/CD pipelines (automated checks) dramatically faster.
+
+Simplifies Tooling: It consolidates 5-10 different tools (like Flake8, Black, isort, pydocstyle, etc.) into one. This simplifies your project's setup, reduces dependencies, and makes configuration much easier.
 
 ## Run ruff on your local Computer
 
