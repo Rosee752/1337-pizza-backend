@@ -32,7 +32,7 @@ def get_all_users(db: Session):
 
 
 def update_user(user: User, changed_user: UserCreateSchema, db: Session):
-    for key, value in changed_user.dict().items():
+    for key, value in changed_user.model_dump().items():
         setattr(user, key, value)
 
     db.commit()
