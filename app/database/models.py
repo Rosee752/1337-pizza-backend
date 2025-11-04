@@ -2,6 +2,7 @@ import datetime
 import decimal
 import enum
 import uuid
+from tkinter.constants import CASCADE
 from typing import List
 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, Numeric, DateTime, String
@@ -20,7 +21,7 @@ class OrderStatus(str, enum.Enum):
     IN_DELIVERY = 'IN_DELIVERY'
     COMPLETED = 'COMPLETED'
 
-
+CASCADE_ALL_DELETE_ORPHAN = 'all, delete-orphan'
 # models
 class PizzaType(Base):
     __tablename__ = 'pizza_type'
@@ -33,7 +34,7 @@ class PizzaType(Base):
 
     dough_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('dough.id'), nullable=False)
     dough: Mapped['Dough'] = relationship()
-    toppings: Mapped[List['PizzaTypeToppingQuantity']] = relationship(cascade='all, delete-orphan',
+    toppings: Mapped[List['PizzaTypeToppingQuantity']] = relationship(cascade= CASCADE_ALL_DELETE_ORPHAN,
                                                                       back_populates='pizza_type')
     type: Mapped[str] = mapped_column(nullable=True)
 
