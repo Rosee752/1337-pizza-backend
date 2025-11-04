@@ -112,10 +112,14 @@ If you like it convenient: Add a button for ruff to your toolbar!
 # SonarQube
 
 - What is the purpose of SonarQube?
+SonarQube is a static code analyzer which checks if your code is compliant with a pre defined set of rules
 
 - What is the purpose of the quality rules of SonarQube?
+all of the code is checked for compliance with this ruleset and is meant to ensure high quality code
+which is maintainable and secure
 
 - What is the purpose of the quality gates of SonarQube?
+quality gates check if your code is ready for release by ensuring it is compliant with the pre defined standards
 
 
 ## Run SonarLint on your local Computer
