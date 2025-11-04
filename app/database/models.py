@@ -2,7 +2,6 @@ import datetime
 import decimal
 import enum
 import uuid
-from tkinter.constants import CASCADE
 from typing import List
 
 from sqlalchemy import CheckConstraint, ForeignKey, Integer, Numeric, DateTime, String

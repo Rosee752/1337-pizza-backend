@@ -9,7 +9,7 @@ import app.api.v1.endpoints.beverage.crud as beverage_crud
 from app.api.v1.endpoints.beverage.schemas import BeverageSchema, BeverageCreateSchema, BeverageListItemSchema
 from app.database.connection import SessionLocal
 
-HTTP_ERROR = "Item not found"
+HTTP_ERROR = 'Item not found'
 
 def get_db():
     db = SessionLocal()
