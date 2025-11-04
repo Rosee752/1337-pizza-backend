@@ -28,9 +28,9 @@ def get_all_toppings(db: Session):
     if entities:
         returnEntities = []
         for entity in entities:
-            listItemEntity = ToppingListItemSchema(
+            list_item_entity = ToppingListItemSchema(
                 **{'id': entity.id, 'name': entity.name, 'price': entity.price, 'description': entity.description})
-            returnEntities.append(listItemEntity)
+            returnEntities.append(list_item_entity)
         return returnEntities
     return entities
 
