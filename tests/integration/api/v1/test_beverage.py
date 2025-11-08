@@ -15,7 +15,7 @@ def db():
 
 def test_beverage_create_read_delete(db):
     new_beverage_name = 'test'
-    new_beverage_price = 3.50
+    new_beverage_price = 4
     new_beverage_description = 'test'
     new_beverage_stock = 25
     number_of_beverages_before = len(beverage_crud.get_all_beverages(db))
