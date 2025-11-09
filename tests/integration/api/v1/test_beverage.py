@@ -46,8 +46,8 @@ def test_beverage_create_read_delete(db):
     beverage_crud.delete_beverage_by_id(created_beverage_id, db)
 
     # Assert: Correct number of users in database after deletion
-    beverage = beverage_crud.get_all_beverages(db)
-    assert len(beverage) == number_of_beverages_before
+    beverages = beverage_crud.get_all_beverages(db)
+    assert len(beverages) == number_of_beverages_before
 
     # Assert: Correct user was deleted from database
     deleted_beverage = beverage_crud.get_beverage_by_id(created_beverage_id, db)
