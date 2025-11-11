@@ -3,6 +3,8 @@ from decimal import Decimal
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
 from app.database.connection import SessionLocal
+from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
+from app.api.v1.endpoints.dough import crud as dough_crud
 
 @pytest.fixture(scope='module')
 def db():
@@ -19,11 +21,23 @@ def test_pizza_type_create_read_delete(db):
     new_pizza_type_description = 'Delicious test pizza type'
     number_of_pizza_types_before = len(pizza_type_crud.get_all_pizza_types(db))
 
+
+    test_dough = DoughCreateSchema(
+        name='Test Dough',
+        price=Decimal('1.00'),
+        description='Standard dough for test',
+        stock=10
+    )
+    # 2. Persist the Dough to the database
+    created_dough = dough_crud.create_dough(test_dough, db)
+    created_dough_id = created_dough.id
+
     # Arrange: Create a new PizzaType object
     pizza_type = PizzaTypeCreateSchema(
         name=new_pizza_type_name,
         price=new_pizza_type_price,
-        description=new_pizza_type_description
+        description=new_pizza_type_description,
+        dough_id = created_dough_id
     )
 
     # Act: Add pizza_type to database
@@ -42,9 +56,11 @@ def test_pizza_type_create_read_delete(db):
     assert read_pizza_type.name == new_pizza_type_name
     assert read_pizza_type.price == new_pizza_type_price
     assert read_pizza_type.description == new_pizza_type_description
+    assert read_pizza_type.dough_id == created_dough_id
 
     # Act: Delete pizza_type
     pizza_type_crud.delete_pizza_type_by_id(created_pizza_type_id, db)
+    dough_crud.delete_dough_by_id(created_dough_id, db)
 
     # Assert: Correct number of pizza_types in database after deletion
     pizza_types = pizza_type_crud.get_all_pizza_types(db)
