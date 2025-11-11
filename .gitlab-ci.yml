@@ -88,6 +88,8 @@ ruff_checking:
 
 integration_testing:
   stage: commit
+  needs:
+    - create_development_container_image
   image:
     name: $CI_REGISTRY_IMAGE/$DEVELOPMENT_CONTAINER_NAME:$DEVELOPMENT_CONTAINER_TAG
     entrypoint: [ "" ]
