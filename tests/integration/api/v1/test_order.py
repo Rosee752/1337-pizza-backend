@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream:tests/integration/api/vp1/test_order.py
-=======
 import pytest
 import uuid
 
@@ -71,4 +69,3 @@ def test_order_create_read_delete(db):
     assert deleted_order is None
     # Zusätzlich: User wieder löschen, um Datenbank aufzuräumen
     user_crud.delete_user_by_id(user_id, db)
->>>>>>> Stashed changes:tests/integration/api/v1/test_order.py
