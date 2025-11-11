@@ -34,7 +34,7 @@ class PizzaType(Base):
 
     dough_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('dough.id'), nullable=False)
     dough: Mapped['Dough'] = relationship()
-    toppings: Mapped[List['PizzaTypeToppingQuantity']] = relationship(cascade=CASCADE_ALL_DELETE_ORPHAN,
+    toppings: Mapped[List['PizzaTypeToppingQuantity']] = relationship(cascade = CASCADE_ALL_DELETE_ORPHAN,
                                                                       back_populates='pizza_type')
     type: Mapped[str] = mapped_column(nullable=True)
 
@@ -95,7 +95,7 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     username: Mapped[str] = mapped_column(unique=False, nullable=False)
-    customer_orders: Mapped[List['Order']] = relationship(cascade=CASCADE_ALL_DELETE_ORPHAN, back_populates='user')
+    customer_orders: Mapped[List['Order']] = relationship(cascade = CASCADE_ALL_DELETE_ORPHAN, back_populates='user')
 
     def __repr__(self):
         return "User(id='%s', username='%s') " \
@@ -108,11 +108,11 @@ class Order(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     order_datetime: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), default=func.now(),
                                                               nullable=True)
-    beverages: Mapped[List['OrderBeverageQuantity']] = relationship(cascade=CASCADE_ALL_DELETE_ORPHAN,
+    beverages: Mapped[List['OrderBeverageQuantity']] = relationship(cascade = CASCADE_ALL_DELETE_ORPHAN,
                                                                     backref='customer_order')
     address_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('address.id'), unique=True, nullable=False)
     address: Mapped['Address'] = relationship(cascade='all, delete', back_populates='customer_order')
-    pizzas: Mapped[List['Pizza']] = relationship(cascade=CASCADE_ALL_DELETE_ORPHAN)
+    pizzas: Mapped[List['Pizza']] = relationship(cascade = CASCADE_ALL_DELETE_ORPHAN)
     user: Mapped['User'] = relationship(back_populates='customer_orders')
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('user.id'), nullable=False)
     order_status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.TRANSMITTED, nullable=False)
