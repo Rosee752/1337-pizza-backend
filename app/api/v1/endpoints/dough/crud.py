@@ -7,7 +7,7 @@ from app.database.models import Dough
 
 
 def create_dough(schema: DoughCreateSchema, db: Session):
-    entity = Dough(**schema.dict())
+    entity = Dough(**schema.model_dump())
     db.add(entity)
     db.commit()
     return entity
@@ -28,7 +28,7 @@ def get_all_doughs(db: Session):
 
 
 def update_dough(dough: Dough, changed_dough: DoughCreateSchema, db: Session):
-    for key, value in changed_dough.dict().items():
+    for key, value in changed_dough.model_dump().items():
         setattr(dough, key, value)
 
     db.commit()

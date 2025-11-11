@@ -6,13 +6,13 @@ import app.api.v1.endpoints.beverage.crud as beverage_crud
 from app.database.models import Beverage
 
 
-def beverage_is_available(beverage_id: uuid.UUID, amount: int, db: Session):
+def beverage_is_available(beverage_id: uuid.UUID, db: Session):
     # Get Beverage
     beverage = beverage_crud.get_beverage_by_id(beverage_id, db)
     # Check if Beverage exists
     if beverage:
         # If there is enough stock return true. Stock CAN be zero
-        return beverage.stock < 0
+        return beverage.stock >= 0
     else:
         return False
 
