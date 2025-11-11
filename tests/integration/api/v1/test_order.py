@@ -1,5 +1,4 @@
 import pytest
-import uuid
 
 import app.api.v1.endpoints.order.crud as order_crud
 import app.api.v1.endpoints.user.crud as user_crud
