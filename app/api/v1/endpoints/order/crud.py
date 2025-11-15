@@ -169,7 +169,7 @@ def calculate_price(price_beverage, price_pizza):
 
     # if order has pizza and beverage, return the price of pizza + beverage
     if price_pizza is not None:
-        return price_pizza
+        return price_pizza + price_beverage
 
 
 def get_price_of_order(
