@@ -11,23 +11,21 @@ from app.database.models import Beverage  # Necessary for direct stock query in 
 from app.api.v1.endpoints.beverage.schemas import BeverageCreateSchema
 
 
-# --- Functions Under Test (Copying the logic provided by the user) ---
+# --- Functions Under Test (Replicated for testing context) ---
 
 def beverage_is_available(beverage_id: uuid.UUID, db: Session):
     """Checks if a beverage is available (stock >= 0)."""
+    # Note: This function only checks if the item exists and stock is not negative.
     beverage = beverage_crud.get_beverage_by_id(beverage_id, db)
     if beverage:
-        # Note: The requirement is for stock >= 0
         return beverage.stock >= 0
     return False
 
 
 def change_stock_of_beverage(beverage_id: uuid.UUID, change_amount: int, db: Session):
     """Changes the stock of a beverage, preventing stock from becoming negative."""
-    # Get Beverage using direct query as per provided logic
     beverage = db.query(Beverage).filter(Beverage.id == beverage_id).first()
 
-    # Check if Beverage exists and if Stock is not getting smaller than zero
     if beverage and beverage.stock + change_amount >= 0:
         setattr(beverage, 'stock', beverage.stock + change_amount)
         db.commit()
@@ -50,70 +48,137 @@ def db():
 
 
 @pytest.fixture
-def setup_beverage(db: Session):
-    """Creates a unique beverage for testing and ensures cleanup."""
+def sample_beverage(db: Session):
+    """Creates a unique beverage with initial stock of 10 for most tests."""
     unique_name = f"Test Beverage {uuid.uuid4()}"
-    initial_stock = 5
+    initial_stock = 10
 
     beverage_data = BeverageCreateSchema(
         name=unique_name,
-        price=Decimal('4.50'),
-        description='Refreshing test drink',
+        price=Decimal('2.50'),
+        description='Test description',
         stock=initial_stock
     )
 
     db_beverage = beverage_crud.create_beverage(beverage_data, db)
-    created_id = db_beverage.id
 
-    # Yield the ID to the test function
-    yield created_id, initial_stock
+    yield db_beverage
 
     # Cleanup: Delete the beverage after the test is complete
-    beverage_crud.delete_beverage_by_id(created_id, db)
+    beverage_crud.delete_beverage_by_id(db_beverage.id, db)
 
 
-# --- Integration Test ---
+# --- Integration Tests for beverage_is_available ---
+# NOTE: The check is only for 'stock >= 0', so tests for specific amounts were fixed.
 
-def test_beverage_stock_management_and_availability(db: Session, setup_beverage):
-    """
-    Tests both beverage_is_available and change_stock_of_beverage functions
-    across various scenarios (create, read, update, boundary conditions).
-    """
-    created_id, _ = setup_beverage
+def test_beverage_is_available_with_sufficient_stock(db: Session, sample_beverage: Beverage):
+    # act: Call beverage_is_available with only two arguments (ID and DB)
+    result = beverage_is_available(sample_beverage.id, db)
+    # assert: Stock 10 >= 0, so it should be available
+    assert result is True
+
+
+def test_beverage_is_available_with_exact_stock(db: Session, sample_beverage: Beverage):
+    # arrange: Set stock to a known amount
+    sample_beverage.stock = 10
+    db.commit()
+    # act
+    result = beverage_is_available(sample_beverage.id, db)
+    # assert
+    assert result is True
+
+
+def test_beverage_is_available_with_zero_stock(db: Session, sample_beverage: Beverage):
+    # arrange: Set stock to 0
+    sample_beverage.stock = 0
+    db.commit()
+    # act
+    result = beverage_is_available(sample_beverage.id, db)
+    # assert: Stock 0 >= 0, so it should be available
+    assert result is True
+
+
+def test_beverage_is_available_with_insufficient_stock(db: Session, sample_beverage: Beverage):
+    # arrange: Since the function only checks for stock >= 0, this test is redundant
+    # for the current function definition, but we can set it to -1 for a fail case.
+    sample_beverage.stock = -1
+    db.commit()
+    # act
+    result = beverage_is_available(sample_beverage.id, db)
+    # assert: Stock -1 is NOT >= 0, so it should be False
+    assert result is False
+
+
+def test_beverage_is_available_when_beverage_not_found(db: Session):
+    # arrange
     non_existent_id = uuid.uuid4()
+    # act
+    result = beverage_is_available(non_existent_id, db)
+    # assert
+    assert result is False
 
-    # --- 1. Test initial availability (Stock: 5) ---
-    assert beverage_is_available(created_id, db) is True
-    assert beverage_is_available(non_existent_id, db) is False
 
-    # --- 2. Test valid stock decrease (Stock: 5 -> 2) ---
-    assert change_stock_of_beverage(created_id, -3, db) is True
+# --- Integration Tests for change_stock_of_beverage ---
 
-    # Verify stock update in DB
-    updated_beverage = beverage_crud.get_beverage_by_id(created_id, db)
-    assert updated_beverage.stock == 2
-    assert beverage_is_available(created_id, db) is True
+def test_change_stock_of_beverage_increase(db: Session, sample_beverage: Beverage):
+    initial_stock = sample_beverage.stock  # 10
+    change_amount = 5
 
-    # --- 3. Test edge case: stock equals zero (Stock: 2 -> 0) ---
-    assert change_stock_of_beverage(created_id, -2, db) is True
-    updated_beverage = beverage_crud.get_beverage_by_id(created_id, db)
-    assert updated_beverage.stock == 0
-    # Availability check for stock >= 0
-    assert beverage_is_available(created_id, db) is True
+    # act
+    result = change_stock_of_beverage(sample_beverage.id, change_amount, db)
 
-    # --- 4. Test invalid stock decrease (Stock: 0 -> should remain 0) ---
-    # Attempt to go below zero, which should fail
-    assert change_stock_of_beverage(created_id, -1, db) is False
+    # assert
+    assert result is True
+    db.refresh(sample_beverage)
+    assert sample_beverage.stock == initial_stock + change_amount
 
-    # Verify stock remains unchanged (still 0)
-    updated_beverage = beverage_crud.get_beverage_by_id(created_id, db)
-    assert updated_beverage.stock == 0
-    assert beverage_is_available(created_id, db) is True
 
-    # --- 5. Test valid stock increase (Stock: 0 -> 10) ---
-    assert change_stock_of_beverage(created_id, 10, db) is True
-    updated_beverage = beverage_crud.get_beverage_by_id(created_id, db)
-    assert updated_beverage.stock == 10
+def test_change_stock_of_beverage_decrease(db: Session, sample_beverage: Beverage):
+    initial_stock = sample_beverage.stock  # 10
+    change_amount = -3
 
-    # --- 6. Test change_stock_of_beverage on non-existent ID ---
-    assert change_stock_of_beverage(non_existent_id, 5, db) is False
+    # act
+    result = change_stock_of_beverage(sample_beverage.id, change_amount, db)
+
+    # assert
+    assert result is True
+    db.refresh(sample_beverage)
+    assert sample_beverage.stock == initial_stock + change_amount
+
+
+def test_change_stock_of_beverage_to_zero(db: Session, sample_beverage: Beverage):
+    initial_stock = sample_beverage.stock  # 10
+    change_amount = -initial_stock  # -10
+
+    # act
+    result = change_stock_of_beverage(sample_beverage.id, change_amount, db)
+
+    # assert
+    assert result is True
+    db.refresh(sample_beverage)
+    assert sample_beverage.stock == 0
+
+
+def test_change_stock_of_beverage_would_go_negative(db: Session, sample_beverage: Beverage):
+    initial_stock = sample_beverage.stock  # 10
+    change_amount = -11  # Attempts to go to -1
+
+    # act
+    result = change_stock_of_beverage(sample_beverage.id, change_amount, db)
+
+    # assert: Must fail
+    assert result is False
+    # Verify stock remains unchanged
+    db.refresh(sample_beverage)
+    assert sample_beverage.stock == initial_stock
+
+
+def test_change_stock_of_beverage_when_beverage_not_found(db: Session):
+    non_existent_id = uuid.uuid4()
+    change_amount = 5
+
+    # act
+    result = change_stock_of_beverage(non_existent_id, change_amount, db)
+
+    # assert
+    assert result is False
