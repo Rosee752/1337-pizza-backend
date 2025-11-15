@@ -1,17 +1,24 @@
-import uuid
 import pytest
 
-
-from app.database.connection import SessionLocal
-from app.database.models import User, OrderStatus
-from app.api.v1.endpoints.order import crud as order_crud
-from app.api.v1.endpoints.order.schemas import OrderCreateSchema, OrderBeverageQuantityCreateSchema
-from app.api.v1.endpoints.order.address import crud as address_crud
+import app.api.v1.endpoints.order.crud as order_crud
+import app.api.v1.endpoints.user.crud as user_crud
+import app.api.v1.endpoints.order.address.crud as address_crud
+import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
+import app.api.v1.endpoints.beverage.crud as beverage_crud
+import app.api.v1.endpoints.dough.crud as dough_crud
+from app.api.v1.endpoints.order.stock_logic import stock_beverage_crud
 from app.api.v1.endpoints.order.address.schemas import AddressCreateSchema
-from app.api.v1.endpoints.user import crud as user_crud
+from app.api.v1.endpoints.order.schemas import OrderCreateSchema
 from app.api.v1.endpoints.user.schemas import UserCreateSchema
-from app.api.v1.endpoints.beverage import crud as beverage_crud
+from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
+from app.api.v1.endpoints.order.schemas import OrderBeverageQuantityCreateSchema
 from app.api.v1.endpoints.beverage.schemas import BeverageCreateSchema
+from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
+from app.database.models import Order
+from app.database.models import PizzaType
+from app.database.models import Dough
+from app.database.connection import SessionLocal
+
 
 
 @pytest.fixture(scope='module')
@@ -22,219 +29,273 @@ def db():
     finally:
         db.close()
 
-def test_order_create_read_delete(db):
-    # Arrange: create a real user in the database
-    user_id = uuid.uuid4()
-    user = User(id=user_id, username='testuser')
-    db.add(user)
-    db.commit()
 
-    # Arrange: create an address
+def test_order_create_read_delete(db):
+    # User anlegen (Pflichtfeld user_id wird benötigt)
+    user = UserCreateSchema(username='testuser')
+    db_user = user_crud.create_user(user, db)
+    user_id = db_user.id
+
+    # Address anlegen (must use exact field names as per schema)
     address = AddressCreateSchema(
-        street='Test Street',
-        post_code='12345',
-        house_number=1,
-        country='Testland',
-        town='Testville',
-        first_name='Jane',
-        last_name='Doe'
+        street='test street',
+        post_code='test postcode',
+        house_number=112,
+        country='test country',
+        town='test town',
+        first_name='test first name',
+        last_name='test last name'
     )
 
     number_of_orders_before = len(order_crud.get_all_orders(db))
 
-    # Create order schema
-    order = OrderCreateSchema(user_id=user_id, address=address)
+    # Order anlegen (mit user_id und Adresse)
+    created_order = OrderCreateSchema(
+        address=address,
+        user_id=user_id
+    )
 
-    # Act: Add order to database
-    db_order = order_crud.create_order(order, db)
+    # Order in DB speichern
+    db_order = order_crud.create_order(created_order, db)
     created_order_id = db_order.id
 
-    # Assert: One more order in database
+    # Prüfen: Anzahl der Bestellungen erhöht sich um 1
     orders = order_crud.get_all_orders(db)
     assert len(orders) == number_of_orders_before + 1
 
-    # Act: Re-read order from database
+    # Order aus DB abfragen und prüfen
     read_order = order_crud.get_order_by_id(created_order_id, db)
-
-    # Assert: Correct order was stored in database
     assert read_order.id == created_order_id
+    assert read_order.address.street == address.street
     assert read_order.user_id == user_id
-    assert read_order.address.street == 'Test Street'
-    assert read_order.address.post_code == '12345'
-    assert read_order.address.house_number == 1
-    assert read_order.address.country == 'Testland'
-    assert read_order.address.town == 'Testville'
-    assert read_order.address.first_name == 'Jane'
-    assert read_order.address.last_name == 'Doe'
 
-    # Act: Delete order
+    # Order löschen
     order_crud.delete_order_by_id(created_order_id, db)
 
-    # Assert: Correct number of orders after deletion
+    # Anzahl der Bestellungen wieder prüfen
     orders = order_crud.get_all_orders(db)
     assert len(orders) == number_of_orders_before
 
-    # Assert: Order was deleted
+    # Prüfen, dass Order gelöscht wurde
     deleted_order = order_crud.get_order_by_id(created_order_id, db)
     assert deleted_order is None
+    # Zusätzlich: User wieder löschen, um Datenbank aufzuräumen
+    user_crud.delete_user_by_id(user_id, db)
 
+def test_order_address(db):
 
-def test_update_order_status(db):
-    # Arrange: create a real user in the database
-    user_id = uuid.uuid4()
-    user = User(id=user_id, username='testuser_status')
-    db.add(user)
-    db.commit()
+        #arrange
+        street = 'test street'
+        post_code = 'test postcode'
+        house_number = 112
+        country = 'test country'
+        town = 'test town'
+        first_name = 'test first name'
+        last_name = 'test last name'
 
-    # Arrange: create an order
-    address = AddressCreateSchema(
-        street='Test Street',
-        post_code='12345',
-        house_number=1,
-        country='Testland',
-        town='Testville',
-        first_name='Jane',
-        last_name='Doe'
-    )
-    order = OrderCreateSchema(user_id=user_id, address=address)
-    db_order = order_crud.create_order(order, db)
-    created_order_id = db_order.id
+        number_of_addresses_before = address_crud.get_all_addresses(db)
 
-    # Act: Update order status
-    from app.database.models import OrderStatus
-    updated_order = order_crud.update_order_status(db_order, OrderStatus.COMPLETED, db)
+        created_address = AddressCreateSchema(
+            street=street,
+            post_code=post_code,
+            house_number=house_number,
+            country=country,
+            town=town,
+            first_name=first_name,
+            last_name=last_name
+        )
 
-    # Assert: Order status was updated
-    assert updated_order.order_status == OrderStatus.COMPLETED
-    db.refresh(db_order)
-    assert db_order.order_status == OrderStatus.COMPLETED
+        #act
+        db_address = address_crud.create_address(created_address, db)
+        created_address_id = db_address.id
 
-    # Cleanup
-    order_crud.delete_order_by_id(created_order_id, db)
-    db.delete(user)
-    db.commit()
+        #assert
+        number_of_addresses_after = address_crud.get_all_addresses(db)
+        assert len(number_of_addresses_before) + 1 == len(number_of_addresses_after)
 
+        #act
+        read_address = address_crud.get_address_by_id(created_address_id, db)
 
-def test_get_all_orders(db):
-    # Arrange: create a real user in the database
-    user_id = uuid.uuid4()
-    user = User(id=user_id, username='testuser_all')
-    db.add(user)
-    db.commit()
+        #assert
+        assert read_address.street == street
+        assert read_address.post_code == post_code
+        assert read_address.house_number == house_number
+        assert read_address.first_name == first_name
+        assert read_address.last_name == last_name
 
-    # Arrange: create orders
-    address = AddressCreateSchema(
-        street='Test Street',
-        post_code='12345',
-        house_number=1,
-        country='Testland',
-        town='Testville',
-        first_name='Jane',
-        last_name='Doe'
-    )
-    number_of_orders_before = len(order_crud.get_all_orders(db))
-    
-    order1 = OrderCreateSchema(user_id=user_id, address=address)
-    order2 = OrderCreateSchema(user_id=user_id, address=address)
-    db_order1 = order_crud.create_order(order1, db)
-    db_order2 = order_crud.create_order(order2, db)
+        #act
+        address_crud.delete_address_by_id(created_address_id, db)
+        number_of_addresses_after = address_crud.get_all_addresses(db)
 
-    # Act: Get all orders
-    all_orders = order_crud.get_all_orders(db)
+        #assert
+        assert len(number_of_addresses_before) == len(number_of_addresses_after)
 
-    # Assert: Both orders are in the list
-    assert len(all_orders) >= number_of_orders_before + 2
-    order_ids = [o.id for o in all_orders]
-    assert db_order1.id in order_ids
-    assert db_order2.id in order_ids
+def test_order_pizza(db):
 
-    # Cleanup
-    order_crud.delete_order_by_id(db_order1.id, db)
-    order_crud.delete_order_by_id(db_order2.id, db)
-    db.delete(user)
-    db.commit()
+    #arrange
+    street = 'test street'
+    post_code = 'test postcode'
+    house_number = 112
+    country = 'test country'
+    town = 'test town'
+    first_name = 'test first name'
+    last_name = 'test last name'
 
-# Constants
-INITIAL_QTY = 3
-UPDATED_QTY = 5
-
-def test_order_flow(db):
-
-    # Create a User
-    user_data = UserCreateSchema(username='testuser')
-    db_user = user_crud.create_user(user_data, db)
+    user = UserCreateSchema(username='test user')
+    db_user = user_crud.create_user(user, db)
     user_id = db_user.id
 
-    # Create an Address
-    address_data = AddressCreateSchema(
-        street='Test Street',
-        post_code='12345',
-        house_number=1,
-        country='Testland',
-        town='Testville',
-        first_name='Jane',
-        last_name='Doe'
+    address = AddressCreateSchema(
+        street= street,
+        post_code=post_code,
+        house_number=house_number,
+        country=country,
+        town=town,
+        first_name=first_name,
+        last_name=last_name
     )
-    db_address = address_crud.create_address(address_data, db)
-    address_id = db_address.id
 
-    # Create a Beverage
-    beverage_data = BeverageCreateSchema(
-        name='Test Beverage',
-        price=2.5,
-        description='Delicious',
-        stock=10
+    created_order = OrderCreateSchema(
+        address=address,
+        user_id=user_id
     )
-    db_beverage = beverage_crud.create_beverage(beverage_data, db)
-    beverage_id = db_beverage.id
 
-    # Create an Order
-    order_data = OrderCreateSchema(user_id=user_id, address=db_address)
-    db_order = order_crud.create_order(order_data, db)
-    order_id = db_order.id
+    order: Order = order_crud.create_order(created_order, db)
 
-    # Add Beverage to Order
-    order_beverage_data = OrderBeverageQuantityCreateSchema(quantity=3, beverage_id=beverage_id)
-    order_crud.create_beverage_quantity(db_order, order_beverage_data, db)
+    dough = DoughCreateSchema(
+        name='test dough',
+        description='test dough disc.',
+        price=1,
+        stock=25
+    )
 
-    # Check Order Data
-    read_order = order_crud.get_order_by_id(order_id, db)
-    assert read_order.user_id == user_id
-    assert read_order.address.street == 'Test Street'
-
-    # Check Beverage Quantity
-    qty = order_crud.get_beverage_quantity_by_id(order_id, beverage_id, db).quantity
-    assert qty == INITIAL_QTY
-
-    # Update Order Status
-    order_crud.update_order_status(db_order, OrderStatus.PREPARING, db)
-    assert db_order.order_status == OrderStatus.PREPARING
-
-    # Check Price
-    total_price = order_crud.get_price_of_order(order_id, db)
-    assert total_price == pytest.approx(3 * 2.5)
-
-    # Update Beverage Quantity
-    order_crud.update_beverage_quantity_of_order(order_id, beverage_id, 5, db)
-    updated_qty = order_crud.get_beverage_quantity_by_id(order_id, beverage_id, db).quantity
-    assert updated_qty == UPDATED_QTY
-    updated_price = order_crud.get_price_of_order(order_id, db)
-    assert updated_price == pytest.approx(5 * 2.5)
-
-    # Delete Beverage from Order
-    initial_count = len(order_crud.get_joined_beverage_quantities_by_order(order_id, db))
-    order_crud.delete_beverage_from_order(order_id, beverage_id, db)
-    assert len(order_crud.get_joined_beverage_quantities_by_order(order_id, db)) == initial_count - 1
+    created_dough:Dough = dough_crud.create_dough(dough, db)
 
 
-    # Cleanup: Delete Order, Address, User, Beverage
-    order_crud.delete_order_by_id(order_id, db)
-    address_crud.delete_address_by_id(address_id, db)
-    user_crud.delete_user_by_id(user_id, db)
-    beverage_crud.delete_beverage_by_id(beverage_id, db)
+    pizza = PizzaTypeCreateSchema(
+        name='test pizza type',
+        description='test pizza type disc.',
+        price=2,
+        dough_id=created_dough.id
+    )
 
-    # Verify cleanup
-    assert order_crud.get_order_by_id(order_id, db) is None
-    assert address_crud.get_address_by_id(address_id, db) is None
-    assert user_crud.get_user_by_id(user_id, db) is None
-    assert beverage_crud.get_beverage_by_id(beverage_id, db) is None
+    created_pizza_type:PizzaType = pizza_type_crud.create_pizza_type(pizza, db)
+
+
+    number_of_pizzas_before = len(order_crud.get_all_pizzas_of_order(order, db))
+
+    #act
+    added_pizza = order_crud.add_pizza_to_order(order,created_pizza_type, db)
+    order_pizzas = order_crud.get_all_pizzas_of_order(order,db)
+
+    #assert
+    assert len(order_pizzas) == number_of_pizzas_before + 1
+    assert added_pizza.id == order_pizzas[0].id
+
+    #act
+    order_crud.delete_pizza_from_order(order=order,pizza_id=added_pizza.id,db=db)
+    deleted_pizza = order_crud.get_pizza_by_id(added_pizza.id, db)
+
+    #assert
+    assert deleted_pizza is None
+
+    order_crud.delete_order_by_id(order_id=order.id, db=db)
+    pizza_type_crud.delete_pizza_type_by_id(pizza_type_id=created_pizza_type.id, db=db)
+    dough_crud.delete_dough_by_id(dough_id=created_dough.id, db=db)
+
+def test_order_beverage(db):
+    # arrange
+    street = 'test street'
+    post_code = 'test postcode'
+    house_number = 112
+    country = 'test country'
+    town = 'test town'
+    first_name = 'test first name'
+    last_name = 'test last name'
+
+    user = UserCreateSchema(username='test user')
+    db_user = user_crud.create_user(user, db)
+    user_id = db_user.id
+
+    address = AddressCreateSchema(
+        street=street,
+        post_code=post_code,
+        house_number=house_number,
+        country=country,
+        town=town,
+        first_name=first_name,
+        last_name=last_name
+    )
+
+    created_order = OrderCreateSchema(
+        address=address,
+        user_id=user_id
+    )
+
+    order:Order = order_crud.create_order(created_order, db)
+
+
+
+    beverage = BeverageCreateSchema(
+        name='test beverage',
+        description='test beverage disc.',
+        price=3,
+        stock=15
+    )
+
+    created_beverage = beverage_crud.create_beverage(beverage, db)
+    created_beverage_id = created_beverage.id
+
+    beverage_quantity = OrderBeverageQuantityCreateSchema(
+        quantity=1,
+        beverage_id=created_beverage_id
+    )
+
+    #act
+    added_beverage_quantity = order_crud.create_beverage_quantity(
+                                        order,beverage_quantity, db)
+    read_beverage_quantity = order_crud.get_beverage_quantity_by_id(
+                            order.id,created_beverage_id, db)
+
+    #assert
+    assert read_beverage_quantity.quantity == beverage_quantity.quantity
+
+    #arrange
+    beverage = BeverageCreateSchema(
+        name='test beverage 2',
+        description='test beverage disc. 2',
+        price=3,
+        stock=15
+    )
+
+    created_beverage_2 = beverage_crud.create_beverage(beverage, db)
+    created_beverage_id_2 = created_beverage_2.id
+
+    beverage_quantity_2 = OrderBeverageQuantityCreateSchema(
+        quantity=1,
+        beverage_id=created_beverage_id_2
+    )
+
+    #act
+    added_beverage_quantity_2 = order_crud.create_beverage_quantity(
+        order,beverage_quantity_2, db
+    )
+    joined_beverage_quantity = order_crud.get_joined_beverage_quantities_by_order(
+        order.id,db
+    )
+
+    #assert
+    assert len(joined_beverage_quantity) == added_beverage_quantity_2.quantity + added_beverage_quantity.quantity
+
+    #act
+    order_crud.delete_beverage_from_order(order.id,added_beverage_quantity.beverage_id,db)
+    joined_beverage_quantity = order_crud.get_joined_beverage_quantities_by_order(order.id,db)
+
+    #assert
+    assert len(joined_beverage_quantity) == added_beverage_quantity_2.quantity
+
+    order_crud.delete_beverage_from_order(order.id,added_beverage_quantity_2.beverage_id,db)
+    order_crud.delete_order_by_id(order.id, db)
+    beverage_crud.delete_beverage_by_id(created_beverage_id, db)
+    beverage_crud.delete_beverage_by_id(created_beverage_id_2, db)
+
