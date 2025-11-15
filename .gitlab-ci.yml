@@ -113,6 +113,10 @@ integration_testing:
     PYTHONPATH=. pytest -x --junitxml=report_integration_tests.xml --cov=app --cov-config=.coveragerc
       --cov-report=xml:integration_coverage.xml tests/integration/
   allow_failure: false
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: on_success
   artifacts:
     reports:
       junit: report_integration_tests.xml
