@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy import true
 
 import app.api.v1.endpoints.order.crud as order_crud
 import app.api.v1.endpoints.user.crud as user_crud
@@ -7,9 +6,7 @@ import app.api.v1.endpoints.order.address.crud as address_crud
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 import app.api.v1.endpoints.beverage.crud as beverage_crud
 import app.api.v1.endpoints.dough.crud as dough_crud
-import app.api.v1.endpoints.topping.crud as topping_crud
-import app.api.v1.endpoints.order.stock_logic.stock_beverage_crud as stock_beverage_crud
-import app.api.v1.endpoints.order.stock_logic.stock_ingredients_crud as stock_ingredients_crud
+from app.api.v1.endpoints.order.stock_logic import stock_beverage_crud
 from app.api.v1.endpoints.order.address.schemas import AddressCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderCreateSchema
 from app.api.v1.endpoints.user.schemas import UserCreateSchema
@@ -17,13 +14,9 @@ from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderBeverageQuantityCreateSchema
 from app.api.v1.endpoints.beverage.schemas import BeverageCreateSchema
 from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
-from app.api.v1.endpoints.topping.schemas import ToppingCreateSchema
-from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeToppingQuantityCreateSchema
 from app.database.models import Order
 from app.database.models import PizzaType
 from app.database.models import Dough
-from app.database.models import Topping
-from app.database.models import PizzaTypeToppingQuantity
 from app.database.connection import SessionLocal
 
 
@@ -92,13 +85,13 @@ def test_order_create_read_delete(db):
 def test_order_address(db):
 
         #arrange
-        street = "test street"
-        post_code = "test postcode"
+        street = 'test street'
+        post_code = 'test postcode'
         house_number = 112
-        country = "test country"
-        town = "test town"
-        first_name = "test first name"
-        last_name = "test last name"
+        country = 'test country'
+        town = 'test town'
+        first_name = 'test first name'
+        last_name = 'test last name'
 
         number_of_addresses_before = address_crud.get_all_addresses(db)
 
@@ -140,13 +133,13 @@ def test_order_address(db):
 def test_order_pizza(db):
 
     #arrange
-    street = "test street"
-    post_code = "test postcode"
+    street = 'test street'
+    post_code = 'test postcode'
     house_number = 112
-    country = "test country"
-    town = "test town"
-    first_name = "test first name"
-    last_name = "test last name"
+    country = 'test country'
+    town = 'test town'
+    first_name = 'test first name'
+    last_name = 'test last name'
 
     user = UserCreateSchema(username='test user')
     db_user = user_crud.create_user(user, db)
@@ -212,13 +205,13 @@ def test_order_pizza(db):
 
 def test_order_beverage(db):
     # arrange
-    street = "test street"
-    post_code = "test postcode"
+    street = 'test street'
+    post_code = 'test postcode'
     house_number = 112
-    country = "test country"
-    town = "test town"
-    first_name = "test first name"
-    last_name = "test last name"
+    country = 'test country'
+    town = 'test town'
+    first_name = 'test first name'
+    last_name = 'test last name'
 
     user = UserCreateSchema(username='test user')
     db_user = user_crud.create_user(user, db)
@@ -321,7 +314,7 @@ def test_stock_beverage(db):
     beverage_available = stock_beverage_crud.beverage_is_available(created_beverage_id, db)
 
     #assert
-    assert beverage_available == True
+    assert beverage_available
 
     #act
     stock_before_change = created_beverage.stock
