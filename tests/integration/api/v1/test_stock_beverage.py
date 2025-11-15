@@ -35,7 +35,7 @@ def sample_beverage(db: Session):
     Creates a unique beverage with initial stock of 10 for each test.
     This fixture ensures each test runs in isolation.
     """
-    unique_name = f"Test Beverage {uuid.uuid4()}"
+    unique_name = f'Test Beverage {uuid.uuid4()}'
     initial_stock = 10
 
     beverage_data = BeverageCreateSchema(
