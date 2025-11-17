@@ -7,7 +7,7 @@ from app.database.models import Beverage
 
 
 def create_beverage(schema: BeverageCreateSchema, db: Session):
-    entity = Beverage(**schema.model_dump())
+    entity = Beverage(**schema.dict())
     db.add(entity)
     db.commit()
     return entity
@@ -28,7 +28,7 @@ def get_all_beverages(db: Session):
 
 
 def update_beverage(beverage: Beverage, changed_beverage: BeverageCreateSchema, db: Session):
-    for key, value in changed_beverage.model_dump().items():
+    for key, value in changed_beverage.dict().items():
         setattr(beverage, key, value)
 
     db.commit()

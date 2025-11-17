@@ -28,7 +28,7 @@ def get_all_beverages(db: Session = Depends(get_db)):
     return beverages
 
 
-@router.post('/', response_model=BeverageSchema, status_code=status.HTTP_201_CREATED, tags=['beverage'])
+@router.post('', response_model=BeverageSchema, status_code=status.HTTP_201_CREATED, tags=['beverage'])
 def create_beverage(beverage: BeverageCreateSchema,
                     request: Request,
                     db: Session = Depends(get_db)):

@@ -14,7 +14,7 @@ def create_order(schema: OrderCreateSchema, db: Session):
     address = create_address(schema.address, db)
     order = Order(user_id=schema.user_id)
     order.address = address
-    order.order_status = OrderStatus.COMPLETED
+    order.order_status = OrderStatus.TRANSMITTED
     db.add(order)
     db.commit()
     return order
