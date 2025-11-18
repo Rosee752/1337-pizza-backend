@@ -2,6 +2,7 @@ import logging
 import uuid
 
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.functions import user
 
 from app.api.v1.endpoints.user.schemas import UserCreateSchema
 from app.database.models import Order

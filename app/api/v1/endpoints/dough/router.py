@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import List
 
@@ -34,9 +35,11 @@ def create_dough(dough: DoughCreateSchema,
     dough_found = dough_crud.get_dough_by_name(dough.name, db)
     if dough_found:
         url = request.url_for('get_dough', dough_id=dough_found.id)
+        logging.warning(f"dough with name: {dough.name} already exists with id: {dough_found.id}")
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
     new_dough = dough_crud.create_dough(dough, db)
+    logging.info(f"new dough with name: {new_dough.name} created")
     return new_dough
 
 

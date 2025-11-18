@@ -1,4 +1,5 @@
 import uuid
+import logging
 
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,7 @@ def create_dough(schema: DoughCreateSchema, db: Session):
     entity = Dough(**schema.model_dump())
     db.add(entity)
     db.commit()
+
     return entity
 
 
@@ -33,6 +35,7 @@ def update_dough(dough: Dough, changed_dough: DoughCreateSchema, db: Session):
 
     db.commit()
     db.refresh(dough)
+
     return dough
 
 
