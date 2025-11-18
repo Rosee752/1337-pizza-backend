@@ -10,6 +10,7 @@ def create_beverage(schema: BeverageCreateSchema, db: Session):
     entity = Beverage(**schema.dict())
     db.add(entity)
     db.commit()
+
     return entity
 
 
@@ -33,6 +34,7 @@ def update_beverage(beverage: Beverage, changed_beverage: BeverageCreateSchema, 
 
     db.commit()
     db.refresh(beverage)
+
     return beverage
 
 
