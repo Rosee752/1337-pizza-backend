@@ -107,11 +107,11 @@ stages:
       method: PUT
       json:
         <<: *cola_beverage
-        name: "Fanta"
+        name: "Sprite"
     response:
       status_code: 303
-    headers:
-      location: "http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/beverages/{beverage_id}"
+      headers:
+        location: "http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/beverages/{beverage_id2}"
 
   - name: Edge Update - Check for status 404 if we update with a non existing id
     request:
@@ -119,7 +119,7 @@ stages:
       method: PUT
       json:
         <<: *cola_beverage
-        name: "Fanta"
+        name: "Sprite"
     response:
       status_code: 404
 
