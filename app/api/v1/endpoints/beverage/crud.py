@@ -1,5 +1,4 @@
 import uuid
-import logging
 
 from sqlalchemy.orm import Session
 

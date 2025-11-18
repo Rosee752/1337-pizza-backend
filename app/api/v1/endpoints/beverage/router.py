@@ -37,14 +37,14 @@ def create_beverage(beverage: BeverageCreateSchema,
 
     if beverage_found:
         url = request.url_for('get_beverage', beverage_id=beverage_found.id)
-        logging.warning(f"the beverage with name: {beverage.name} already exists with id: {beverage_found.id}")
+        logging.warning(f'the beverage with name: {beverage.name} already exists with id: {beverage_found.id}\n')
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
     new_beverage = beverage_crud.create_beverage(beverage, db)
     if new_beverage is not None:
-        logging.info('the new beverage with name: {} created'.format(new_beverage.name))
+        logging.info('the new beverage with name: {} created\n'.format(new_beverage.name))
     if new_beverage is None:
-        logging.fatal('the beverage with name: {} could not be created'.format(beverage.name))
+        logging.fatal('the beverage with name: {} could not be created\n'.format(beverage.name))
     return new_beverage
 
 
@@ -62,10 +62,10 @@ def update_beverage(
         if beverage_found.name == changed_beverage.name:
             beverage_crud.update_beverage(beverage_found, changed_beverage, db)
             log_message = (
-                f"the beverage with name: \"{changed_beverage.name}\" was updated successfully:\n"
-                f"new beverage description: {changed_beverage.description}\n"
-                f"new beverage name: {changed_beverage.name}\n"
-                f"new beverage stock: {changed_beverage.stock}\n"
+                f'the beverage with name: {changed_beverage.name} was updated successfully:\n'
+                f'new beverage description: {changed_beverage.description}\n'
+                f'new beverage name: {changed_beverage.name}\n'
+                f'new beverage stock: {changed_beverage.stock}\n'
             )
             logging.info(log_message)
             return Response(status_code=status.HTTP_204_NO_CONTENT)
@@ -74,17 +74,17 @@ def update_beverage(
             if beverage_name_found:
                 url = request.url_for('get_beverage', beverage_id=beverage_name_found.id)
                 log_message = (
-                    f"the given id {beverage_id} does not match the given name {changed_beverage.name}\n"
-                    f"beverage with name: {changed_beverage.name} found with id {beverage_name_found.id}\n"
+                    f'the given id {beverage_id} does not match the given name {changed_beverage.name}\n'
+                    f'beverage with name: {changed_beverage.name} found with id {beverage_name_found.id}\n'
                 )
                 logging.warning(log_message)
                 return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
             else:
                 updated_beverage = beverage_crud.create_beverage(changed_beverage, db)
                 response.status_code = status.HTTP_201_CREATED
-                logging.info('new beverage with name: {} created'.format(changed_beverage.name))
+                logging.info('new beverage with name: {} created\n'.format(changed_beverage.name))
     else:
-        logging.fatal('id {} does not exist'.format(beverage_id))
+        logging.fatal('id {} does not exist\n'.format(beverage_id))
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
     return updated_beverage
 
@@ -109,9 +109,9 @@ def delete_beverage(
     beverage = beverage_crud.get_beverage_by_id(beverage_id, db)
 
     if not beverage:
-        logging.fatal('the beverage with id: {} does not exist'.format(beverage_id))
+        logging.fatal('the beverage with id: {} does not exist\n'.format(beverage_id))
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     beverage_crud.delete_beverage_by_id(beverage_id, db)
-    logging.info('the beverage with id: {} deleted'.format(beverage_id))
+    logging.info('the beverage with id: {} deleted\n'.format(beverage_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
