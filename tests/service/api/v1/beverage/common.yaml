@@ -8,3 +8,4 @@ variables:
   beverage_price: 2.99
   beverage_description: "Coca Cola Company"
   beverage_stock: 15
+  not_available_id: "00000000-0000-0000-0000-000000000000"
