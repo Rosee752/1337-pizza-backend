@@ -58,8 +58,9 @@ def sample_beverage(db: Session):
 def test_beverage_is_available_with_sufficient_stock(db: Session, sample_beverage: Beverage):
     """Covers: if beverage: True, return beverage.stock >= 0: True"""
     # arrange: sample_beverage.stock is 10
+    sample_stock = 5
     # act
-    result = beverage_is_available(sample_beverage.id, db)
+    result = beverage_is_available(sample_beverage.id,sample_stock, db)
     # assert
     assert result is True
 
@@ -68,9 +69,10 @@ def test_beverage_is_available_with_zero_stock(db: Session, sample_beverage: Bev
     """Covers: if beverage: True, return beverage.stock >= 0: True"""
     # arrange: Set stock to 0
     sample_beverage.stock = 0
+    sample_amount = 0
     db.commit()
     # act
-    result = beverage_is_available(sample_beverage.id, db)
+    result = beverage_is_available(sample_beverage.id,sample_amount, db)
     # assert: Stock 0 >= 0 is True
     assert result is True
 
@@ -79,9 +81,10 @@ def test_beverage_is_available_with_negative_stock(db: Session, sample_beverage:
     """Covers: if beverage: True, return beverage.stock >= 0: False"""
     # arrange: Set stock to -1
     sample_beverage.stock = -1
+    sample_amount = 4
     db.commit()
     # act
-    result = beverage_is_available(sample_beverage.id, db)
+    result = beverage_is_available(sample_beverage.id,sample_amount, db)
     # assert: Stock -1 >= 0 is False
     assert result is False
 
@@ -90,8 +93,9 @@ def test_beverage_is_available_when_beverage_not_found(db: Session):
     """Covers: if beverage: False"""
     # arrange
     non_existent_id = uuid.uuid4()
+    sample_stock = 5
     # act
-    result = beverage_is_available(non_existent_id, db)
+    result = beverage_is_available(non_existent_id,sample_stock, db)
     # assert
     assert result is False
 
