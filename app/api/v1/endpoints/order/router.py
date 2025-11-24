@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import List, Optional, TypeVar
 
@@ -42,6 +43,10 @@ def get_all_orders(
 def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
                  copy_order_id: Optional[uuid.UUID] = None):
     if user_crud.get_user_by_id(order.user_id, db) is None:
+        log_message = (
+            f'tried to find the user{order.user_id}, to create an order but user already exists\n'
+        )
+        logging.fatal(log_message)
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     # Create Order
@@ -49,24 +54,31 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
 
     # Check if Copy Order is specified
     if copy_order_id is None:
+        logging.info(f'created order {new_order.id} for user {new_order.user_id}\n')
         return new_order
 
     # Check Copy Order
     copy_order = order_crud.get_order_by_id(copy_order_id, db)
     if not copy_order:
+        logging.fatal(f' other order with id: {copy_order_id} does not exist. Order with id: {new_order.id}, will be deleted\n')
         order_crud.delete_order_by_id(new_order.id, db)
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
+
+    logging.info(f'found old order with id:{copy_order_id}\n')
 
     # Copy Pizzas
     for pizza in copy_order.pizzas:
         pizza_type = pizza.pizza_type
         if not stock_ingredients_crud.ingredients_are_available(pizza_type):
             # Not enough Stock
+            logging.fatal(f'stock for pizza type {pizza_type} is not available. Order with id: {new_order.id} will be deleted\n')
             order_crud.delete_order_by_id(new_order.id, db)
             raise HTTPException(status_code=409, detail='Conflict')
 
         order_crud.add_pizza_to_order(new_order, pizza_type, db)
+        logging.info(f'added pizza: {pizza_type} to order with id: {new_order.id}\n')
         stock_ingredients_crud.reduce_stock_of_ingredients(pizza_type, db)
+        logging.info(f'reduced stock for pizza: {pizza_type}\n')
 
     # Copy Beverages
     for beverage_quantity in copy_order.beverages:
@@ -75,9 +87,11 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
         if not stock_beverage_crud.change_stock_of_beverage(beverage_quantity.beverage_id,
                                                             -beverage_quantity.quantity, db):
             # Not enough Stock
+            logging.fatal(f'the beverage: {beverage_quantity.beverage_id} does not have enough stock and will be deleted\n')
             order_crud.delete_order_by_id(new_order.id, db)
             raise HTTPException(status_code=409, detail='Conflict')
 
+        logging.info(f'added beverage: {beverage_quantity.beverage_id} to Order {new_order.id}\n')
         order_crud.create_beverage_quantity(new_order, schema, db)
 
     return new_order
@@ -101,17 +115,21 @@ def delete_order(
 ):
     order = order_crud.get_order_by_id(order_id, db)
     if not order:
+        logging.fatal(f'order with id: {order_id} does not exist and can not be deleted\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     ordered_pizzas = order.pizzas
     if ordered_pizzas:
         for pizza in ordered_pizzas:
             stock_ingredients_crud.increase_stock_of_ingredients(pizza.pizza_type, db)
+            logging.info(f'pizza with id:{pizza.id} deleted. Stock for pizza type: {pizza.pizza_type} increased\n')
     order_beverages = order_crud.get_joined_beverage_quantities_by_order(order_id, db)
     if order_beverages:
         for order_beverage in order_beverages:
+            logging.info(f'order with id: {order_id} will be deleted. changed stock of beverage: {order_beverage.beverage_id}.\n')
             stock_beverage_crud.change_stock_of_beverage(order_beverage.beverage.id, order_beverage.quantity, db)
     order_crud.delete_order_by_id(order_id, db)
+    logging.info(f'deleted order with id: {order_id}\n')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -123,15 +141,19 @@ def add_pizza_to_order(
 ):
     order = order_crud.get_order_by_id(order_id, db)
     if not order:
+        logging.fatal(f' tried to update order with id: {order_id} but could not find such order.\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     pizza_type = pizza_type_crud.get_pizza_type_by_id(schema.pizza_type_id, db)
     if not pizza_type:
+        logging.fatal(f'tried to update order with id: {order_id}. but could not find pizza type:{schema.pizza_type_id}\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
     if not stock_ingredients_crud.ingredients_are_available(pizza_type):
+        logging.fatal(f'tried to update order with id: {order_id}. but ingredients for pizza type: {pizza_type} are not available\n')
         return Response(status_code=status.HTTP_409_CONFLICT)
     stock_ingredients_crud.reduce_stock_of_ingredients(pizza_type, db)
     pizza = order_crud.add_pizza_to_order(order, pizza_type, db)
+    logging.info(f'pizza with id: {pizza.id} was successfully added to order: {order_id}\n')
     return pizza
 
 
@@ -156,17 +178,22 @@ def delete_pizza_from_order(
 ):
     order = order_crud.get_order_by_id(order_id, db)
     if not order:
+        logging.fatal(f'tried to delete pizza: {pizza.id} from order: {order_id} but could not find such order\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     pizza_entity = order_crud.get_pizza_by_id(pizza.id, db)
     if not pizza_entity:
+        logging.fatal(f'tried to delete pizza: {pizza.id} from order: {order_id} but could not find such pizza\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     stock_ingredients_crud.increase_stock_of_ingredients(pizza_entity.pizza_type, db)
+    logging.info(f'pizza with id: {pizza.id} will be deleted from order: {order_id} so stock got increased\n')
 
     if not order_crud.delete_pizza_from_order(order, pizza.id, db):
+        logging.fatal(f'the pizza with id: {pizza.id} is not part of order: {order_id}\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
+    logging.info(f'pizza with id: {pizza.id} was successfully deleted from order: {order_id}\n')
     return Response(status_code=status.HTTP_200_OK)
 
 
