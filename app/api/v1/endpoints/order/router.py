@@ -253,25 +253,38 @@ def create_order_beverage(
 ):
     order = order_crud.get_order_by_id(order_id, db)
     if not order:
+        logging.fatal(f'tried to add beverages: {beverage_quantity.beverage_id}'
+                      f' to order: {order_id} but could not find such order\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     # Check if new Quantity is valid
     if beverage_quantity.quantity <= 0:
+        logging.fatal(f'the quantity of beverage {beverage_quantity.beverage_id} is not enough\n')
         raise HTTPException(status_code=422)
 
     beverage = beverage_crud.get_beverage_by_id(beverage_quantity.beverage_id, db)
     if not beverage:
+        logging.fatal(f'tried to add beverage: {beverage_quantity.beverage_id}'
+                      f' but it doesnt exist\n')
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     beverage_quantity_found = order_crud.get_beverage_quantity_by_id(order_id, beverage_quantity.beverage_id, db)
     if beverage_quantity_found:
         url = request.url_for('get_order_beverages', order_id=beverage_quantity_found.order_id)
+        logging.warning(f'the beverage with id: {beverage_quantity.beverage_id}'
+                        f' already exists in the order: {order_id}\n')
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+
     # Change Stock of Beverage if enough is available
     if not stock_beverage_crud.beverage_is_available(beverage_quantity.beverage_id, beverage_quantity.quantity, db):
+        logging.fatal(f'tried to add beverage: {beverage_quantity.beverage_id} to order{order_id} '
+                      f'with qauntity {beverage_quantity.quantity}'
+                      f' but it exceeds the stocks limit\n')
         raise HTTPException(status_code=409, detail='Conflict')
     stock_beverage_crud.change_stock_of_beverage(beverage_quantity.beverage_id, -beverage_quantity.quantity, db)
     new_beverage_quantity = order_crud.create_beverage_quantity(order, beverage_quantity, db)
+    logging.info(f'added beverage quantity{beverage_quantity.beverage_id} '
+                 f'to order: {order_id}\n')
     return new_beverage_quantity
 
 
@@ -287,29 +300,42 @@ def update_beverage_of_order(
 ):
     order = order_crud.get_order_by_id(order_id, db)
     if not order:
+        logging.fatal(f'order {order_id} does not exist\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     # Check if new Quantity is valid
     if beverage_quantity.quantity <= 0:
+        logging.fatal(f'tried to update beverage: {beverage_quantity.beverage_id}'
+                      f' to order{order_id} but no more stock available\n')
         return Response(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY)
 
     beverage_id = beverage_quantity.beverage_id
     order_beverage_quantity = order_crud.get_beverage_quantity_by_id(order_id, beverage_id, db)
     if not order_beverage_quantity:
+        logging.fatal(f'tried to update beverage: {beverage_id}'
+                      f' to order {order_id} but couldnt find the beverage\n')
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
     new_quantity = beverage_quantity.quantity
     old_quantity = order_beverage_quantity.quantity
     # Change Stock if enough is available: change Amount is Previous - New
     if not stock_beverage_crud.change_stock_of_beverage(beverage_id, old_quantity - new_quantity, db):
+        logging.fatal(f'tried to update beverage: {beverage_quantity.beverage_id} to order{order_id} '
+                      f'with qauntity {beverage_quantity.quantity}'
+                      f' but it exceeds the stocks limit\n')
         raise HTTPException(status_code=409, detail='Conflict')
     # Update
     new_order_beverage_quantity = order_crud.update_beverage_quantity_of_order(
         order_id, beverage_quantity.beverage_id, beverage_quantity.quantity, db)
     # Return updated OrderBeverageQuantity
     if new_order_beverage_quantity:
+        logging.info(f'upadated beverage quantity{beverage_quantity.beverage_id} '
+                     f'to order: {order_id}\n')
         return new_order_beverage_quantity
     else:
+        logging.fatal(f'Couldnt update beverage {beverage_quantity.beverage_id}'
+                      f' to order {order_id}\n')
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
+
 
 
 @router.delete(
@@ -322,16 +348,22 @@ def delete_beverage_from_order(
 ):
     order = order_crud.get_order_by_id(order_id, db)
     if not order:
+        logging.fatal(f'tried to delete order: {order_id} but could not find such order\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     order_beverage = order_crud.get_beverage_quantity_by_id(order_id, beverage_id, db)
     if not order_beverage:
+        logging.fatal(f'tried to delete beverage {beverage_id}'
+                      f' from order {order_id} but could not find beverage.\n')
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
     # Increase Stock by the quantity of the deleted order
     order_quantity = order_beverage.quantity
     stock_beverage_crud.change_stock_of_beverage(beverage_id, order_quantity, db)
+    logging.info(f'stock updated with the qauntity of the beverage {beverage_id}'
+                 f' of the order {order_id}\n')
     # Delete OrderBeverageQuantity
     order_crud.delete_beverage_from_order(order_id, beverage_id, db)
+    logging.info(f'deleted beverage: {beverage_id} from order: {order_id}\n')
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
