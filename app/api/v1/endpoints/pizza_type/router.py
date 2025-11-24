@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import List, TypeVar
 
@@ -43,6 +44,7 @@ def create_pizza_type(
 
     if pizza_type_found:
         url = request.url_for('get_pizza_type', pizza_type_id=pizza_type_found.id)
+        logging.warning(f'pizza_type with name: {pizza_type.name} already exists with id: {pizza_type_found.id}\n')
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
     dough = dough_crud.get_dough_by_id(pizza_type.dough_id, db)
@@ -50,6 +52,7 @@ def create_pizza_type(
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     new_pizza_type = pizza_type_crud.create_pizza_type(pizza_type, db)
+    logging.info(f'new pizza_type with name: {new_pizza_type.name} created\n')
     response.status_code = status.HTTP_201_CREATED
     return new_pizza_type
 
@@ -68,16 +71,29 @@ def update_pizza_type(
     if pizza_type_found:
         if pizza_type_found.name == changed_pizza_type.name:
             pizza_type_crud.update_pizza_type(pizza_type_found, changed_pizza_type, db)
+            log_message = (
+                f'the pizza_type with name: {changed_pizza_type.name} was updated successfully:\n'
+                f'new pizza_type description: {changed_pizza_type.description}\n'
+                f'new pizza_type name: {changed_pizza_type.name}\n'
+            )
+            logging.info(log_message)
             return Response(status_code=status.HTTP_204_NO_CONTENT)
         else:
             pizza_type_name_found = pizza_type_crud.get_pizza_type_by_name(changed_pizza_type.name, db)
             if pizza_type_name_found:
                 url = request.url_for('get_pizza_type', pizza_type_id=pizza_type_name_found.id)
+                log_message = (
+                    f'the given id {pizza_type_id} does not match the given name {changed_pizza_type.name}\n'
+                    f'dough with name: {changed_pizza_type.name} found with id {pizza_type_id}\n'
+                )
+                logging.warning(log_message)
                 return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
             else:
                 updated_pizza_type = pizza_type_crud.create_pizza_type(changed_pizza_type, db)
+                logging.info('new pizza_type with name: {} created\n'.format(changed_pizza_type.name))
                 response.status_code = status.HTTP_201_CREATED
     else:
+        logging.fatal('id {} does not exist\n'.format(pizza_type_id))
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     return updated_pizza_type
@@ -103,9 +119,11 @@ def delete_pizza_type(pizza_type_id: uuid.UUID,
     pizza_type = pizza_type_crud.get_pizza_type_by_id(pizza_type_id, db)
 
     if not pizza_type:
+        logging.fatal('the pizza_type with id: {} does not exist\n'.format(pizza_type_id))
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     pizza_type_crud.delete_pizza_type_by_id(pizza_type_id, db)
+    logging.info('the pizza_type with id: {} deleted\n'.format(pizza_type_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

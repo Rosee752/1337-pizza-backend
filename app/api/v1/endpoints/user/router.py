@@ -33,6 +33,7 @@ def get_all_users(
 @router.post('', response_model=UserSchema, status_code=status.HTTP_201_CREATED, tags=['user'])
 def create_user(user: UserCreateSchema, db: Session = Depends(get_db)):
     new_user = user_crud.create_user(user, db)
+    logging.info(f'new user with name: {new_user.username} created\n')
     return new_user
 
 
@@ -46,6 +47,10 @@ def update_user(
 
     if user_found:
         user_crud.update_user(user_found, changed_user, db)
+        log_message = (
+            f'the user with name: {changed_user.username} was updated successfully:\n'
+        )
+        logging.info(log_message)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     else:
         logging.error('User {} not found'.format(user_id))
@@ -72,7 +77,9 @@ def delete_user(
     user_found = user_crud.get_user_by_id(user_id, db)
 
     if not user_found:
+        logging.fatal('the user with id: {} does not exist\n'.format(user_id))
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     user_crud.delete_user_by_id(user_id, db)
+    logging.info('the user with id: {} deleted\n'.format(user_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)

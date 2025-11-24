@@ -1,3 +1,4 @@
+import logging
 import uuid
 from typing import List
 
@@ -36,9 +37,11 @@ def create_topping(topping: ToppingCreateSchema,
 
     if topping_found:
         url = request.url_for('get_topping', topping_id=topping_found.id)
+        logging.warning(f'topping with name: {topping.name} already exists with id: {topping_found.id}\n')
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
     new_topping = topping_crud.create_topping(topping, db)
+    logging.info(f'new topping with name: {new_topping.name} created\n')
     return new_topping
 
 
@@ -56,16 +59,30 @@ def update_topping(
     if topping_found:
         if topping_found.name == changed_topping.name:
             topping_crud.update_topping(topping_found, changed_topping, db)
+            log_message = (
+                f'the topping with name: {changed_topping.name} was updated successfully:\n'
+                f'new topping description: {changed_topping.description}\n'
+                f'new topping name: {changed_topping.name}\n'
+                f'new topping stock: {changed_topping.stock}\n'
+            )
+            logging.info(log_message)
             return Response(status_code=status.HTTP_204_NO_CONTENT)
         else:
             topping_name_found = topping_crud.get_topping_by_name(changed_topping.name, db)
             if topping_name_found:
                 url = request.url_for('get_topping', topping_id=topping_name_found.id)
+                log_message = (
+                    f'the given id {topping_id} does not match the given name {changed_topping.name}\n'
+                    f'topping with name: {changed_topping.name} found with id {topping_name_found.id}\n'
+                )
+                logging.warning(log_message)
                 return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
             else:
                 updated_topping = topping_crud.create_topping(changed_topping, db)
+                logging.info('new topping with name: {} created\n'.format(changed_topping.name))
                 response.status_code = status.HTTP_201_CREATED
     else:
+        logging.fatal('id {} does not exist\n'.format(topping_id))
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     return updated_topping
@@ -89,7 +106,9 @@ def delete_topping(topping_id: uuid.UUID, db: Session = Depends(get_db)):
     topping = topping_crud.get_topping_by_id(topping_id, db)
 
     if not topping:
+        logging.fatal('the topping with id: {} does not exist\n'.format(topping_id))
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
     topping_crud.delete_topping_by_id(topping_id, db)
+    logging.info('the topping with id: {} deleted\n'.format(topping_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
