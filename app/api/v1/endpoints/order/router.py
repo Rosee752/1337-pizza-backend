@@ -60,7 +60,8 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
     # Check Copy Order
     copy_order = order_crud.get_order_by_id(copy_order_id, db)
     if not copy_order:
-        logging.fatal(f' other order with id: {copy_order_id} does not exist. Order with id: {new_order.id}, will be deleted\n')
+        logging.fatal(f' other order with id: {copy_order_id} does not exist.'
+                      f' Order with id: {new_order.id}, will be deleted\n')
         order_crud.delete_order_by_id(new_order.id, db)
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
@@ -71,7 +72,8 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
         pizza_type = pizza.pizza_type
         if not stock_ingredients_crud.ingredients_are_available(pizza_type):
             # Not enough Stock
-            logging.fatal(f'stock for pizza type {pizza_type} is not available. Order with id: {new_order.id} will be deleted\n')
+            logging.fatal(f'stock for pizza type {pizza_type} is not available.'
+                          f' Order with id: {new_order.id} will be deleted\n')
             order_crud.delete_order_by_id(new_order.id, db)
             raise HTTPException(status_code=409, detail='Conflict')
 
@@ -87,7 +89,8 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
         if not stock_beverage_crud.change_stock_of_beverage(beverage_quantity.beverage_id,
                                                             -beverage_quantity.quantity, db):
             # Not enough Stock
-            logging.fatal(f'the beverage: {beverage_quantity.beverage_id} does not have enough stock and will be deleted\n')
+            logging.fatal(f'the beverage: {beverage_quantity.beverage_id} '
+                          f'does not have enough stock and will be deleted\n')
             order_crud.delete_order_by_id(new_order.id, db)
             raise HTTPException(status_code=409, detail='Conflict')
 
@@ -126,7 +129,8 @@ def delete_order(
     order_beverages = order_crud.get_joined_beverage_quantities_by_order(order_id, db)
     if order_beverages:
         for order_beverage in order_beverages:
-            logging.info(f'order with id: {order_id} will be deleted. changed stock of beverage: {order_beverage.beverage_id}.\n')
+            logging.info(f'order with id: {order_id} will be deleted.'
+                         f' changed stock of beverage: {order_beverage.beverage_id}.\n')
             stock_beverage_crud.change_stock_of_beverage(order_beverage.beverage.id, order_beverage.quantity, db)
     order_crud.delete_order_by_id(order_id, db)
     logging.info(f'deleted order with id: {order_id}\n')
@@ -146,10 +150,12 @@ def add_pizza_to_order(
 
     pizza_type = pizza_type_crud.get_pizza_type_by_id(schema.pizza_type_id, db)
     if not pizza_type:
-        logging.fatal(f'tried to update order with id: {order_id}. but could not find pizza type:{schema.pizza_type_id}\n')
+        logging.fatal(f'tried to update order with id: {order_id}.'
+                      f' but could not find pizza type:{schema.pizza_type_id}\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
     if not stock_ingredients_crud.ingredients_are_available(pizza_type):
-        logging.fatal(f'tried to update order with id: {order_id}. but ingredients for pizza type: {pizza_type} are not available\n')
+        logging.fatal(f'tried to update order with id: {order_id}.'
+                      f' but ingredients for pizza type: {pizza_type} are not available\n')
         return Response(status_code=status.HTTP_409_CONFLICT)
     stock_ingredients_crud.reduce_stock_of_ingredients(pizza_type, db)
     pizza = order_crud.add_pizza_to_order(order, pizza_type, db)
@@ -178,12 +184,14 @@ def delete_pizza_from_order(
 ):
     order = order_crud.get_order_by_id(order_id, db)
     if not order:
-        logging.fatal(f'tried to delete pizza: {pizza.id} from order: {order_id} but could not find such order\n')
+        logging.fatal(f'tried to delete pizza: {pizza.id}'
+                      f' from order: {order_id} but could not find such order\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     pizza_entity = order_crud.get_pizza_by_id(pizza.id, db)
     if not pizza_entity:
-        logging.fatal(f'tried to delete pizza: {pizza.id} from order: {order_id} but could not find such pizza\n')
+        logging.fatal(f'tried to delete pizza: {pizza.id} from order: {order_id}'
+                      f' but could not find such pizza\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     stock_ingredients_crud.increase_stock_of_ingredients(pizza_entity.pizza_type, db)
