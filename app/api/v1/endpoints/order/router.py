@@ -33,6 +33,7 @@ def get_db():
     finally:
         db.close()
 
+
 @router.post('', response_model=OrderSchema, status_code=status.HTTP_201_CREATED, tags=['order'])
 def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
                  copy_order_id: Optional[uuid.UUID] = None):
@@ -93,7 +94,7 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
 
     return new_order
 
-@router.get('',response_model=OrderSchema,tags=['order'])
+@router.get('',response_model=List[OrderSchema],tags=['order'])
 def get_orders_by_status(statuses: Optional[List[OrderStatus]] = Query(None),db: Session = Depends(get_db)):
     if statuses is None:
         orders = order_crud.get_all_orders(db)
