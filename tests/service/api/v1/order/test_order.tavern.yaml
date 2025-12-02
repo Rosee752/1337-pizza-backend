@@ -59,7 +59,7 @@ stages:
         address:
           <<: *address
           id: "{address_id}"
-        order_status: "TRANSMITTED"
+        order_status: "OPEN"
 
   #Get all Orders
   - name: Get a list of orders

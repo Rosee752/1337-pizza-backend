@@ -1,3 +1,4 @@
+import datetime
 import logging
 import uuid
 from typing import List, Optional, TypeVar
@@ -11,6 +12,7 @@ import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 import app.api.v1.endpoints.user.crud as user_crud
 import app.api.v1.endpoints.order.crud as order_crud
 from app.api.v1.endpoints.beverage.router import HTTP_ERROR
+from app.api.v1.endpoints.order.address.schemas import AddressSchema
 from app.api.v1.endpoints.order.stock_logic import stock_beverage_crud
 from app.api.v1.endpoints.order.stock_logic import stock_ingredients_crud
 from app.api.v1.endpoints.order.schemas \
@@ -19,6 +21,7 @@ from app.api.v1.endpoints.order.schemas \
     OrderPriceSchema, OrderBeverageQuantityBaseSchema, OrderCreateSchema
 from app.api.v1.endpoints.user.schemas import UserSchema
 from app.database.connection import SessionLocal
+from app.api.v1.endpoints.order.schemas import OrderStatus
 
 router = APIRouter()
 
@@ -99,6 +102,14 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
 
     return new_order
 
+@router.get('',response_model=OrderSchema,tags=['order'])
+def get_orders_by_status(statuses: list[OrderStatus],db: Session = Depends(get_db)):
+    orders = order_crud.get_order_by_status(statuses, db)
+    if not orders:
+        logging.warning(f'tried to find orders with status: {statuses}'
+                        f' but could not find any orders\n')
+        raise HTTPException(status_code=404, detail=HTTP_ERROR)
+    return orders
 
 @router.get('/{order_id}', response_model=OrderSchema, tags=['order'])
 def get_order(

@@ -60,9 +60,9 @@ stages:
           <<: *address
           id: "{address_id}"
 
-  - name: update order status and verify 204 with correct status "TRANSMITTED"
+  - name: update order status and verify 204 with correct status "OPEN"
     request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order/{order_id}?order_status=TRANSMITTED
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order/{order_id}?order_status=OPEN
       method: PUT
     response:
       status_code: 204
@@ -95,9 +95,9 @@ stages:
     response:
       status_code: 422
 
-  - name: update order status and verify 404 with correct status "TRANSMITTED" and non existing order id
+  - name: update order status and verify 404 with correct status "OPEN" and non existing order id
     request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order/00000000-0000-0000-0000-000000000000?order_status=TRANSMITTED
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order/00000000-0000-0000-0000-000000000000?order_status=OPEN
       method: PUT
     response:
       status_code: 404
