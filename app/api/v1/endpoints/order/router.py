@@ -1,4 +1,3 @@
-import datetime
 import logging
 import uuid
 from typing import List, Optional, TypeVar
@@ -12,7 +11,6 @@ import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 import app.api.v1.endpoints.user.crud as user_crud
 import app.api.v1.endpoints.order.crud as order_crud
 from app.api.v1.endpoints.beverage.router import HTTP_ERROR
-from app.api.v1.endpoints.order.address.schemas import AddressSchema
 from app.api.v1.endpoints.order.stock_logic import stock_beverage_crud
 from app.api.v1.endpoints.order.stock_logic import stock_ingredients_crud
 from app.api.v1.endpoints.order.schemas \

@@ -349,7 +349,7 @@ def test_filter_order_by_status(db: Session, order_factory):
 
     #assert
     for order in filtered_orders:
-        assert order.order_status == test_status2 or order.order_status == test_status1
+        assert order.order_status == test_status2 or test_status1
 
     #act
     order_crud.update_order_status(new_orders[2], OrderStatus.COMPLETED, db)
@@ -357,4 +357,4 @@ def test_filter_order_by_status(db: Session, order_factory):
 
     # assert
     for order in filtered_orders:
-        assert order.order_status == test_status2 or order.order_status == test_status1
+        assert order.order_status == test_status2 or test_status1
