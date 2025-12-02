@@ -2,7 +2,7 @@ import logging
 import uuid
 from typing import List, Optional, TypeVar
 
-from fastapi import APIRouter, Depends, Request, Response, status, HTTPException
+from fastapi import APIRouter, Depends, Request, Response, status, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,7 @@ from app.api.v1.endpoints.order.schemas \
     OrderPriceSchema, OrderBeverageQuantityBaseSchema, OrderCreateSchema
 from app.api.v1.endpoints.user.schemas import UserSchema
 from app.database.connection import SessionLocal
+from app.api.v1.endpoints.order.schemas import OrderStatus
 
 router = APIRouter()
 
@@ -29,14 +30,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-@router.get('', response_model=List[OrderSchema], tags=['order'])
-def get_all_orders(
-        db: Session = Depends(get_db),
-):
-    orders = order_crud.get_all_orders(db)
-    return orders
 
 
 @router.post('', response_model=OrderSchema, status_code=status.HTTP_201_CREATED, tags=['order'])
@@ -99,6 +92,17 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
 
     return new_order
 
+@router.get('',response_model=List[OrderSchema],tags=['order'])
+def get_orders_by_status(statuses: Optional[List[OrderStatus]] = Query(None),db: Session = Depends(get_db)):
+    if statuses is None:
+        orders = order_crud.get_all_orders(db)
+        return orders
+    orders = order_crud.get_order_by_status(statuses, db)
+    if not orders:
+        logging.warning(f'tried to find orders with status: {statuses}'
+                        f' but could not find any orders\n')
+        raise HTTPException(status_code=404, detail=HTTP_ERROR)
+    return orders
 
 @router.get('/{order_id}', response_model=OrderSchema, tags=['order'])
 def get_order(

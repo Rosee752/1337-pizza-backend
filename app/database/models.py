@@ -16,7 +16,7 @@ class Base(DeclarativeBase):
 
 # Enum for OrderStatus
 class OrderStatus(str, enum.Enum):
-    TRANSMITTED = 'TRANSMITTED'
+    OPEN = 'OPEN'
     PREPARING = 'PREPARING'
     IN_DELIVERY = 'IN_DELIVERY'
     COMPLETED = 'COMPLETED'
@@ -115,7 +115,7 @@ class Order(Base):
     pizzas: Mapped[List['Pizza']] = relationship(cascade = CASCADE_ALL_DELETE_ORPHAN)
     user: Mapped['User'] = relationship(back_populates='customer_orders')
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('user.id'), nullable=False)
-    order_status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.TRANSMITTED, nullable=False)
+    order_status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.OPEN, nullable=False)
 
     def __repr__(self):
         return "Order(id='%s', order_datetime='%s' beverages='%s', pizzas='%s', user='%s', \

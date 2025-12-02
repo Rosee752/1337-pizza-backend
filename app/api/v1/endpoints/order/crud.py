@@ -14,7 +14,7 @@ def create_order(schema: OrderCreateSchema, db: Session):
     address = create_address(schema.address, db)
     order = Order(user_id=schema.user_id)
     order.address = address
-    order.order_status = OrderStatus.TRANSMITTED
+    order.order_status = OrderStatus.OPEN
     db.add(order)
     db.commit()
     return order
@@ -180,3 +180,10 @@ def get_price_of_order(
     price_pizza = get_price_of_pizza_in_order(order_id, db)
 
     return calculate_price(price_beverage, price_pizza)
+
+def get_order_by_status(
+        statuses: list[OrderStatus],
+        db: Session,
+):
+    entities = db.query(Order).filter(Order.order_status.in_(statuses)).all()
+    return entities

@@ -1,5 +1,6 @@
 import pytest
 import uuid
+from typing import List
 from sqlalchemy.orm import Session
 
 import app.api.v1.endpoints.order.crud as order_crud
@@ -17,6 +18,7 @@ from app.api.v1.endpoints.beverage.schemas import BeverageCreateSchema
 from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
 from app.database.models import Order, User, Dough, PizzaType
 from app.database.connection import SessionLocal
+from app.api.v1.endpoints.order.schemas import OrderStatus
 
 
 # --- Fixtures ---
@@ -71,6 +73,43 @@ def sample_order(db: Session, sample_user: User):
     # The associated address is deleted automatically via cascade
     # The user is deleted by the sample_user fixture
     order_crud.delete_order_by_id(db_order.id, db)
+
+@pytest.fixture
+def order_factory(db: Session, sample_user: User):
+    # Liste, um die erstellten Orders zu tracken (für das Cleanup)
+    created_orders = []
+
+    def _create_orders(count: int = 3) -> List[Order]:
+        new_orders = []
+        for i in range(count):
+            address = AddressCreateSchema(
+                street=f'test street {i}',
+                post_code=f'1234{i}',
+                house_number=10 + i,
+                country='test country',
+                town='test town',
+                first_name=f'test name {i}',
+                last_name='test last name'
+            )
+
+            created_order_schema = OrderCreateSchema(
+                address=address,
+                user_id=sample_user.id
+            )
+
+            db_order = order_crud.create_order(created_order_schema, db)
+            new_orders.append(db_order)
+            created_orders.append(db_order)
+
+        return new_orders
+
+    yield _create_orders
+
+    for order in created_orders:
+        try:
+            order_crud.delete_order_by_id(order.id, db)
+        except Exception:
+            pass
 
 
 # --- Tests ---
@@ -288,3 +327,34 @@ def test_order_beverage(db: Session, sample_order: Order):
     order_crud.delete_beverage_from_order(sample_order.id, added_beverage_quantity_2.beverage_id, db)
     beverage_crud.delete_beverage_by_id(created_beverage_id, db)
     beverage_crud.delete_beverage_by_id(created_beverage_id_2, db)
+
+def test_filter_order_by_status(db: Session, order_factory):
+    """This test also uses the sample_order fixture, removing duplication."""
+
+    #arrange
+    new_orders = order_factory(count=3)
+    test_status1 = OrderStatus.OPEN
+    test_status2 = OrderStatus.PREPARING
+
+    #act
+    filtered_orders = order_crud.get_order_by_status([test_status1], db)
+
+    #assert
+    for order in filtered_orders:
+        assert order.order_status == test_status1
+
+    #act
+    order_crud.update_order_status(new_orders[0], test_status2, db)
+    filtered_orders = order_crud.get_order_by_status([test_status1,test_status2], db)
+
+    #assert
+    for order in filtered_orders:
+        assert order.order_status == test_status2 or test_status1
+
+    #act
+    order_crud.update_order_status(new_orders[2], OrderStatus.COMPLETED, db)
+    filtered_orders = order_crud.get_order_by_status([test_status1,test_status2], db)
+
+    # assert
+    for order in filtered_orders:
+        assert order.order_status == test_status2 or test_status1
