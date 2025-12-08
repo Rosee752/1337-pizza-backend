@@ -20,7 +20,7 @@ from app.api.v1.endpoints.order.schemas \
 from app.api.v1.endpoints.user.schemas import UserSchema
 from app.database.connection import SessionLocal
 from app.api.v1.endpoints.order.schemas import OrderStatus
-
+from app.api.v1.endpoints.order.schemas import OrderStatusPatchSchema
 router = APIRouter()
 
 
@@ -410,3 +410,30 @@ def get_user_of_order(
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
     user = order.user
     return user
+
+@router.patch('/{order_id}/status',status_code=status.HTTP_200_OK, response_model=OrderSchema, tags=['order'])
+def update_order_status(
+        order_id: uuid.UUID,
+        status_update: OrderStatusPatchSchema,
+        db: Session = Depends(get_db)
+):
+    # 1. Retrieve the order
+    order = order_crud.get_order_by_id(order_id, db)
+
+    # 2. Check if order exists
+    if not order:
+        logging.fatal(f'tried to update status for order: {order_id} but could not find such order\n')
+        return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+    # 3. Log the change
+    logging.info(f'updating order: {order_id} status from {order.order_status} to {status_update.order_status}\n')
+
+    # 4. Update the status using existing CRUD
+    # Note: Your crud.py already has this function implemented
+    updated_order = order_crud.update_order_status(
+        order=order,
+        changed_order=status_update.order_status,
+        db=db
+    )
+
+    return updated_order

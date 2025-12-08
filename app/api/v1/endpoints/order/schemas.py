@@ -77,3 +77,8 @@ class JoinedOrderBeverageQuantitySchema(OrderBaseSchema, BeverageBaseSchema):
 class OrderUpdateOrderStatusSchema(OrderBaseSchema):
     id: uuid.UUID
     order_status: OrderStatus
+
+
+
+class OrderStatusPatchSchema(BaseModel):
+    order_status: OrderStatus
