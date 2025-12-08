@@ -92,7 +92,7 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
 
     return new_order
 
-@router.get('',response_model=List[OrderSchema],tags=['order'])
+@router.get('',status_code=status.HTTP_200_OK,response_model=List[OrderSchema],tags=['order'])
 def get_orders_by_status(statuses: Optional[List[OrderStatus]] = Query(None),db: Session = Depends(get_db)):
     if statuses is None:
         orders = order_crud.get_all_orders(db)
@@ -411,10 +411,10 @@ def get_user_of_order(
     user = order.user
     return user
 
-@router.patch('/{order_id}/status',status_code=status.HTTP_200_OK, response_model=OrderSchema, tags=['order'])
+@router.put('/{order_id}',status_code=status.HTTP_204_NO_CONTENT, tags=['order'])
 def update_order_status(
         order_id: uuid.UUID,
-        status_update: OrderStatusPatchSchema,
+        order_status: OrderStatus = Query(..., description="The new status of the order"),
         db: Session = Depends(get_db)
 ):
     # 1. Retrieve the order
@@ -426,13 +426,13 @@ def update_order_status(
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     # 3. Log the change
-    logging.info(f'updating order: {order_id} status from {order.order_status} to {status_update.order_status}\n')
+    logging.info(f'updating order: {order_id} status from {order.order_status} to {order_status}\n')
 
     # 4. Update the status using existing CRUD
     # Note: Your crud.py already has this function implemented
     updated_order = order_crud.update_order_status(
         order=order,
-        changed_order=status_update.order_status,
+        changed_order=order_status,
         db=db
     )
 
