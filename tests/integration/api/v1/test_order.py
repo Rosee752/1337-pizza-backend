@@ -358,3 +358,30 @@ def test_filter_order_by_status(db: Session, order_factory):
     # assert
     for order in filtered_orders:
         assert order.order_status == test_status2 or test_status1
+
+def test_update_order_status_logic(db: Session, order_factory):
+
+    orders = order_factory(count=1)
+    test_order = orders[0]
+    original_status = test_order.order_status
+
+    # Ziel-Status definieren (anders als der aktuelle)
+    target_status = OrderStatus.IN_DELIVERY
+
+    # ACT: Status ändern
+    updated_order = order_crud.update_order_status(
+        order=test_order,
+        changed_order=target_status,
+        db=db
+    )
+
+    # ASSERT
+    # 1. Prüfen, ob das Rückgabe-Objekt aktualisiert ist
+    assert updated_order.order_status == target_status
+    assert updated_order.id == test_order.id
+
+    # 2. Prüfen, ob es wirklich in der DB persistiert wurde
+    # dazu laden wir das Objekt frisch aus der DB
+    db.refresh(test_order)
+    assert test_order.order_status == target_status
+    assert test_order.order_status != original_status
