@@ -20,7 +20,7 @@ from app.api.v1.endpoints.order.schemas \
 from app.api.v1.endpoints.user.schemas import UserSchema
 from app.database.connection import SessionLocal
 from app.api.v1.endpoints.order.schemas import OrderStatus
-from app.api.v1.endpoints.order.schemas import OrderStatusPatchSchema
+
 router = APIRouter()
 
 
@@ -414,7 +414,7 @@ def get_user_of_order(
 @router.put('/{order_id}',status_code=status.HTTP_204_NO_CONTENT, tags=['order'])
 def update_order_status(
         order_id: uuid.UUID,
-        order_status: OrderStatus = Query(..., description="The new status of the order"),
+        order_status: OrderStatus = Query(..., description='The new status of the order'),
         db: Session = Depends(get_db)
 ):
     # 1. Retrieve the order
