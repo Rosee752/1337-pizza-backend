@@ -21,6 +21,11 @@ class OrderStatus(str, enum.Enum):
     IN_DELIVERY = 'IN_DELIVERY'
     COMPLETED = 'COMPLETED'
 
+class SpicinessType(str, enum.Enum):
+    LIGHT = 'LIGHT'
+    MEDIUM = 'MEDIUM'
+    HOT = 'HOT'
+
 CASCADE_ALL_DELETE_ORPHAN = 'all, delete-orphan'
 # models
 class PizzaType(Base):
@@ -47,6 +52,20 @@ class PizzaType(Base):
         return "PizzaType(id='%s', name='%s', price='%s', description='%s', type='%s')" \
             % (self.id, self.name, self.price, self.description, self.type)
 
+class Sauce(Base):
+    __tablename__ = 'sauce'
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+
+    name: Mapped[str] = mapped_column(nullable=False, unique=True)
+    price: Mapped[decimal.Decimal] = mapped_column(Numeric(10, 2), nullable=False)
+    spiciness: Mapped[SpicinessType] = mapped_column(default=SpicinessType.LIGHT, nullable=False)
+    stock: Mapped[int] = mapped_column(NON_NEGATIVE_STOCK_CONSTRAINT,nullable=False)
+    description: Mapped[str] = mapped_column(String(255),nullable=False, default='')
+
+    def __repr__(self):
+        return "Sauce(id='%s', name='%s', price='%s', stock='%s', spiciness='%s', description='%s')" \
+            %(self.id, self.name, self.price, self.stock, self.spiciness, self.description)
 
 class PizzaTypeToppingQuantity(Base):
     __tablename__ = 'pizza_type_topping_quantity'
