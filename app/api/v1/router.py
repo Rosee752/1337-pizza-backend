@@ -15,3 +15,5 @@ router.include_router(dough_router, prefix='/doughs')
 router.include_router(order_router, prefix='/order')
 router.include_router(user_router, prefix='/users')
 router.include_router(beverage_router, prefix='/beverages')
+
+router.include_router(sauce_router, prefix='/sauces')
