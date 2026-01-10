@@ -1,0 +1,147 @@
+---
+
+test_name: Make sure server implements crud functionality for sauce endpoint
+
+stages:
+
+  # Creating sauces ************************************************************
+
+  - name: Create - Verify that status code equals 201 when we create a new sauce and the sauce is returned
+    # max_retries and delay_after needs to be set in first stage of each stage to wait for uvicorn
+    max_retries: 20
+    delay_after: 2
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces
+      json: &garlic_sauce
+        name: "Garlic Sauce"
+        price: 3.50
+        spiciness: "MEDIUM"
+        stock: 15
+        description: "A fine garlic sauce"
+      method: POST
+    response:
+      status_code: 201
+      json:
+        <<: *garlic_sauce
+        id: !anything
+      save:
+        json:
+          sauce_id: id
+
+  - name: Edge Create - Verify that we get a redirect to an already existing item, when we create a new sauce with a name that already exists
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces
+      json:
+        name: "Garlic Sauce"
+        price: 9.99
+        description: "My new sauce"
+        spiciness: "MEDIUM"
+        stock: 300
+      method: POST
+    response:
+      status_code: 303
+      headers:
+        location: "http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}"
+
+  # Read sauces ************************************************************
+
+  - name: Read - Get sauce with id
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
+      method: GET
+    response:
+      status_code: 200
+      json: &returned_sauce
+        <<: *garlic_sauce
+        id: "{sauce_id}"
+
+#  - name: Edge Read - Check for status 404 if we try to get a sauce with a none existing id 00000000-0000-0000-0000-000000000000
+
+  - name: Read - Get a list of sauces
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces
+      method: GET
+    response:
+      strict: False
+      status_code: 200
+      json: !anylist
+        id: "{sauce_id}"
+        name: "Garlic Sauce"
+        price: !anything
+        spiciness: "MEDIUM"
+        stock: !anything
+        description: !anything
+
+  # Update sauces ************************************************************
+
+  - name: Update - Modify sauces
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
+      method: PUT
+      json:
+        <<: *garlic_sauce
+        description: "My new description"
+    response:
+      status_code: 204
+
+  - name: Edge Update - Check that a new sauce is created when an existing sauce gets a new name and the name does not already exists
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
+      method: PUT
+      json:
+        <<: *garlic_sauce
+        name: "Curry Sauce"
+    response:
+      status_code: 201
+      json:
+        <<: *garlic_sauce
+        id: !anything
+        name: "Curry Sauce"
+      save:
+        json:
+          sauce_id2: id
+
+  - name: Edge Update - Check for status if we update sauce to an already existing name
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
+      method: PUT
+      json:
+        <<: *garlic_sauce
+        name: "Curry Sauce"
+    response:
+      status_code: 303
+      headers:
+        location: "http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id2}"
+
+  - name: Edge Update - Check for status 404 if we update with a non existing id
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/beverages/00000000-0000-0000-0000-000000000000
+      method: PUT
+      json:
+        <<: *garlic_sauce
+        name: "Curry Sauce"
+    response:
+      status_code: 404
+
+  # Check deleting sauce
+
+  - name: Delete - Delete sauce created first with id and check status
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
+      method: DELETE
+    response:
+      status_code: 204
+
+  - name: Delete - Delete sauce created second with id and check status
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id2}
+      method: DELETE
+    response:
+      status_code: 204
+
+  - name: Edge Delete - Check for status 404 if we delete a non-existing id
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/00000000-0000-0000-0000-000000000000
+      method: DELETE
+    response:
+      status_code: 404

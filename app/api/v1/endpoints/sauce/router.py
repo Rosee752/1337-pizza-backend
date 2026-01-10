@@ -34,7 +34,7 @@ def create_sauce(sauce: SauceCreateSchema,
     sauce_found = sauce_crud.get_sauce_by_name(sauce.name, db)
 
     if sauce_found:
-        url = request.url_for('get_sauce', beverage_id=sauce_found.id)
+        url = request.url_for('get_sauce', sauce_id=sauce_found.id)
         logging.warning(f'the sauce with name: {sauce.name} already exists with id: {sauce_found.id}\n')
         return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
 
