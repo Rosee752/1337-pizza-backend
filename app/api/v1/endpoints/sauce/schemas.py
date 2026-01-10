@@ -15,3 +15,11 @@ class SauceCreateSchema(SauceBaseSchema):
 class SauceSchema(SauceCreateSchema):
     id:uuid.UUID
 
+class SauceListItemSchema(SauceBaseSchema):
+    id: uuid.UUID
+    name: str
+    price: float
+    description: str
+    spiciness: SpicinessType
+    stock: int
+
