@@ -226,7 +226,7 @@ def test_order_pizza(db: Session, sample_order: Order):
     # arrange
     # 1. Dough erstellen
     dough = DoughCreateSchema(
-        name='test dough',
+        name=f'test dough {uuid.uuid4()}',  # <--- HIER ÄNDERN (füge das f'' und {uuid.uuid4()} hinzu)
         description='test dough disc.',
         price=1,
         stock=25
@@ -235,11 +235,11 @@ def test_order_pizza(db: Session, sample_order: Order):
 
     # 2. Sauce erstellen (NEU HINZUGEFÜGT)
     sauce = SauceCreateSchema(
-        name='test sauce',
+        name=f'test sauce {uuid.uuid4()}',
         description='test sauce desc',
         price=1,
         stock=20,
-        spiciness=SpicinessType.MILD
+        spiciness=SpicinessType.LIGHT
     )
     created_sauce = sauce_crud.create_sauce(sauce, db)
 
