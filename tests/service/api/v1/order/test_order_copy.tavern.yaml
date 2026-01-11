@@ -216,7 +216,7 @@ stages:
     request:
       url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
       method: DELETE
-      response:
+    response:
       status_code: 204
 
   #Delete Dough

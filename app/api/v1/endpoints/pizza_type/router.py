@@ -55,7 +55,7 @@ def create_pizza_type(
 
     if not sauce_crud.get_sauce_by_id(pizza_type.sauce_id, db):
         logging.warning(f'sauce id {pizza_type.sauce_id} not found')
-        raise HTTPException(status_code=404, detail="Sauce not found")
+        raise HTTPException(status_code=404, detail='Sauce not found')
 
     new_pizza_type = pizza_type_crud.create_pizza_type(pizza_type, db)
     logging.info(f'new pizza_type with name: {new_pizza_type.name} created\n')
@@ -79,7 +79,7 @@ def update_pizza_type(
 
             if pizza_type_found.sauce_id != changed_pizza_type.sauce_id:
                 if not sauce_crud.get_sauce_by_id(changed_pizza_type.sauce_id, db):
-                    raise HTTPException(status_code=404, detail="Sauce not found")
+                    raise HTTPException(status_code=404, detail='Sauce not found')
 
             pizza_type_crud.update_pizza_type(pizza_type_found, changed_pizza_type, db)
             log_message = (
