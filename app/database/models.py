@@ -39,6 +39,10 @@ class PizzaType(Base):
 
     dough_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('dough.id'), nullable=False)
     dough: Mapped['Dough'] = relationship()
+
+    sauce_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('sauce.id'), nullable=False)
+    sauce: Mapped['Sauce'] = relationship()
+
     toppings: Mapped[List['PizzaTypeToppingQuantity']] = relationship(cascade = CASCADE_ALL_DELETE_ORPHAN,
                                                                       back_populates='pizza_type')
     type: Mapped[str] = mapped_column(nullable=True)
