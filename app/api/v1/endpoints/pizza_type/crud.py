@@ -1,7 +1,7 @@
 import uuid
 
 from sqlalchemy.orm import Session
-
+from app.database.models import PizzaType, Dough, Sauce, Topping, PizzaTypeToppingQuantity
 from app.api.v1.endpoints.pizza_type.schemas import \
     PizzaTypeCreateSchema, \
     PizzaTypeToppingQuantityCreateSchema
@@ -77,3 +77,34 @@ def get_joined_topping_quantities_by_pizza_type(
     entities = db.query(PizzaTypeToppingQuantity) \
         .filter(PizzaTypeToppingQuantity.pizza_type_id == pizza_type_id)
     return entities.all()
+
+
+def are_ingredients_available(pizza_type_id: str, quantity: int, db: Session) -> bool:
+    """
+    Checks if there is enough stock for dough, sauce and toppings for the given quantity of pizzas.
+    """
+    pizza_type = get_pizza_type_by_id(pizza_type_id, db)
+    if not pizza_type:
+        return False
+
+    # 1. Check Dough Stock
+    if pizza_type.dough.stock < quantity:
+        return False
+
+    # 2. Check Sauce Stock
+    if pizza_type.sauce and pizza_type.sauce.stock < quantity:
+        return False
+
+    # 3. Check Toppings Stock
+    pizza_toppings = db.query(PizzaTypeToppingQuantity).filter(
+        PizzaTypeToppingQuantity.pizza_type_id == pizza_type_id
+    ).all()
+
+    for pt_topping in pizza_toppings:
+        required_topping_amount = pt_topping.quantity * quantity
+        topping = db.query(Topping).filter(Topping.id == pt_topping.topping_id).first()
+
+        if not topping or topping.stock < required_topping_amount:
+            return False
+
+    return True
