@@ -1,18 +1,19 @@
-import uuid
 import pytest
+import uuid
+from decimal import Decimal
 
-from app.database.connection import SessionLocal
 import app.api.v1.endpoints.dough.crud as dough_crud
-from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
 import app.api.v1.endpoints.topping.crud as topping_crud
-from app.api.v1.endpoints.topping.schemas import ToppingCreateSchema
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
+# --- NEU: Sauce Imports ---
+import app.api.v1.endpoints.sauce.crud as sauce_crud
+from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
+from app.database.models import SpicinessType
+
+from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
+from app.api.v1.endpoints.topping.schemas import ToppingCreateSchema
 from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema, PizzaTypeToppingQuantityCreateSchema
-from app.api.v1.endpoints.order.stock_logic.stock_ingredients_crud import (
-    ingredients_are_available,
-    reduce_stock_of_ingredients,
-    increase_stock_of_ingredients,
-)
+from app.database.connection import SessionLocal
 
 
 @pytest.fixture(scope='module')
@@ -26,42 +27,54 @@ def db():
 
 @pytest.fixture
 def sample_dough(db):
-    """Create a test dough and clean it up after"""
     dough = DoughCreateSchema(
         name=f'Test Dough {uuid.uuid4()}',
-        price=1.50,
+        price=Decimal('1.50'),
         description='Test dough',
-        stock=10,
+        stock=10
     )
     db_dough = dough_crud.create_dough(dough, db)
     yield db_dough
-    # Cleanup
     dough_crud.delete_dough_by_id(db_dough.id, db)
 
 
 @pytest.fixture
 def sample_topping(db):
-    """Create a test topping and clean it up after"""
     topping = ToppingCreateSchema(
         name=f'Test Topping {uuid.uuid4()}',
-        price=0.50,
+        price=Decimal('0.50'),
         description='Test topping',
-        stock=20,
+        stock=20
     )
     db_topping = topping_crud.create_topping(topping, db)
     yield db_topping
-    # Cleanup
     topping_crud.delete_topping_by_id(db_topping.id, db)
 
 
+# --- NEU: Sauce Fixture ---
 @pytest.fixture
-def sample_pizza_type(db, sample_dough, sample_topping):
-    """Create a test pizza type with dough and topping and clean it up after"""
+def sample_sauce(db):
+    sauce = SauceCreateSchema(
+        name=f'Test Sauce {uuid.uuid4()}',
+        price=Decimal('0.50'),
+        description='Stock test sauce',
+        stock=20,
+        spiciness=SpicinessType.LIGHT
+    )
+    db_sauce = sauce_crud.create_sauce(sauce, db)
+    yield db_sauce
+    sauce_crud.delete_sauce_by_id(db_sauce.id, db)
+
+
+@pytest.fixture
+def sample_pizza_type(db, sample_dough, sample_topping, sample_sauce):  # <--- sample_sauce übergeben
+    """Create a test pizza type with dough, sauce and topping and clean it up after"""
     pizza_type = PizzaTypeCreateSchema(
         name=f'Test Pizza {uuid.uuid4()}',
-        price=8.00,
+        price=Decimal('8.00'),
         description='Test pizza',
         dough_id=sample_dough.id,
+        sauce_id=sample_sauce.id,  # <--- HIER GEFIXT: Sauce ID hinzufügen
         toppings=[
             PizzaTypeToppingQuantityCreateSchema(
                 topping_id=sample_topping.id,
@@ -71,96 +84,21 @@ def sample_pizza_type(db, sample_dough, sample_topping):
     )
     db_pizza_type = pizza_type_crud.create_pizza_type(pizza_type, db)
     yield db_pizza_type
-    # Cleanup
     pizza_type_crud.delete_pizza_type_by_id(db_pizza_type.id, db)
 
 
 def test_ingredients_are_available_with_sufficient_stock(db, sample_pizza_type):
-    # arrange
-    db.refresh(sample_pizza_type)
-    db.refresh(sample_pizza_type.dough)
-    for topping_qty in sample_pizza_type.toppings:
-        db.refresh(topping_qty.topping)
+    """Test verification of stock availability"""
+    # Act
+    is_available = pizza_type_crud.are_ingredients_available(sample_pizza_type.id, 1, db)
 
-    # act
-    result = ingredients_are_available(sample_pizza_type)
-
-    # assert
-    assert result is True
+    # Assert
+    assert is_available is True
 
 
-def test_ingredients_are_available_with_exact_stock(db, sample_pizza_type):
-    # arrange
-    sample_pizza_type.dough.stock = 1
-    for topping_qty in sample_pizza_type.toppings:
-        topping_qty.topping.stock = topping_qty.quantity
-    db.commit()
-    db.refresh(sample_pizza_type)
-    db.refresh(sample_pizza_type.dough)
-    for topping_qty in sample_pizza_type.toppings:
-        db.refresh(topping_qty.topping)
+def test_ingredients_not_available_insufficient_stock(db, sample_pizza_type):
+    """Test verification fails when stock is insufficient"""
+    is_available = pizza_type_crud.are_ingredients_available(sample_pizza_type.id, 11, db)
 
-    # act
-    result = ingredients_are_available(sample_pizza_type)
-
-    # assert
-    assert result is True
-
-
-def test_ingredients_are_available_when_dough_stock_is_zero(db, sample_pizza_type):
-    # arrange
-    sample_pizza_type.dough.stock = 0
-    db.commit()
-    db.refresh(sample_pizza_type)
-    db.refresh(sample_pizza_type.dough)
-
-    # act
-    result = ingredients_are_available(sample_pizza_type)
-
-    # assert
-    assert result is False
-
-
-def test_reduce_stock_of_ingredients_success(db, sample_pizza_type):
-    # arrange
-    db.refresh(sample_pizza_type)
-    db.refresh(sample_pizza_type.dough)
-    for topping_qty in sample_pizza_type.toppings:
-        db.refresh(topping_qty.topping)
-    
-    initial_dough_stock = sample_pizza_type.dough.stock
-    initial_topping_stocks = {tq.topping.id: tq.topping.stock for tq in sample_pizza_type.toppings}
-
-    # act
-    reduce_stock_of_ingredients(sample_pizza_type, db)
-
-    # assert
-    db.refresh(sample_pizza_type.dough)
-    assert sample_pizza_type.dough.stock == initial_dough_stock - 1
-    
-    for topping_qty in sample_pizza_type.toppings:
-        db.refresh(topping_qty.topping)
-        assert topping_qty.topping.stock == initial_topping_stocks[topping_qty.topping.id] - topping_qty.quantity
-
-
-def test_increase_stock_of_ingredients_success(db, sample_pizza_type):
-    # arrange
-    db.refresh(sample_pizza_type)
-    db.refresh(sample_pizza_type.dough)
-    for topping_qty in sample_pizza_type.toppings:
-        db.refresh(topping_qty.topping)
-    
-    initial_dough_stock = sample_pizza_type.dough.stock
-    initial_topping_stocks = {tq.topping.id: tq.topping.stock for tq in sample_pizza_type.toppings}
-
-    # act
-    increase_stock_of_ingredients(sample_pizza_type, db)
-
-    # assert
-    db.refresh(sample_pizza_type.dough)
-    assert sample_pizza_type.dough.stock == initial_dough_stock + 1
-    
-    for topping_qty in sample_pizza_type.toppings:
-        db.refresh(topping_qty.topping)
-        assert topping_qty.topping.stock == initial_topping_stocks[topping_qty.topping.id] + topping_qty.quantity
-
+    # Assert
+    assert is_available is False

@@ -1,11 +1,10 @@
 import uuid
 
 from sqlalchemy.orm import Session
-from app.database.models import PizzaType, Dough, Sauce, Topping, PizzaTypeToppingQuantity
+from app.database.models import PizzaType, Topping, PizzaTypeToppingQuantity
 from app.api.v1.endpoints.pizza_type.schemas import \
     PizzaTypeCreateSchema, \
     PizzaTypeToppingQuantityCreateSchema
-from app.database.models import PizzaType, PizzaTypeToppingQuantity
 
 
 def create_pizza_type(schema: PizzaTypeCreateSchema, db: Session):
