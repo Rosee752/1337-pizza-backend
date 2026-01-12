@@ -130,7 +130,8 @@ def delete_order(
         for pizza in ordered_pizzas:
             stock_ingredients_crud.increase_stock_of_ingredients(pizza.pizza_type, db)
             sauce_crud.change_stock_of_sauce(pizza.pizza_type.sauce_id, 1, db)
-            logging.info(f'pizza with id:{pizza.id} deleted. Stock for pizza type: {pizza.pizza_type} and sauce got increased\n')
+            logging.info(f'pizza with id:{pizza.id} deleted. '
+                         f'Stock for pizza type: {pizza.pizza_type} and sauce got increased\n')
     order_beverages = order_crud.get_joined_beverage_quantities_by_order(order_id, db)
     if order_beverages:
         for order_beverage in order_beverages:
