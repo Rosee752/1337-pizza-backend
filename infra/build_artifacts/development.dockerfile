@@ -7,7 +7,7 @@ ARG PYTHON_IMAGE_VERSION=3.10
 #
 ### Target: development
 #
-FROM python:${PYTHON_IMAGE_VERSION}-alpine AS development
+FROM public.ecr.aws/docker/library/python:${PYTHON_IMAGE_VERSION}-alpine AS development
 
 ENV USER="web"
 ENV HOME="/${USER}"

@@ -71,3 +71,19 @@ stages:
         quantity: 1
     response:
       status_code: 409
+
+  - name: Delete the Order (Should restore sauce stock)
+    request:
+        url: "{host}/api/v1/orders/{order_id}"
+        method: DELETE
+    response:
+        status_code: 204
+
+  - name: Verify Sauce Stock is Restored (Should be 1 again)
+    request:
+            url: "{host}/api/v1/sauces/{sauce_id}"
+            method: GET
+    response:
+            status_code: 200
+            json:
+              stock: 1
