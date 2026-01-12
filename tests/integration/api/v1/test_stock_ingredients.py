@@ -1,19 +1,20 @@
-import pytest
 import uuid
-from decimal import Decimal
+
+import pytest
 
 import app.api.v1.endpoints.dough.crud as dough_crud
-import app.api.v1.endpoints.topping.crud as topping_crud
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
-# --- NEU: Sauce Imports ---
 import app.api.v1.endpoints.sauce.crud as sauce_crud
-from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
-from app.database.models import SpicinessType
-
+import app.api.v1.endpoints.topping.crud as topping_crud
 from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
+from app.api.v1.endpoints.pizza_type.schemas import (
+    PizzaTypeCreateSchema,
+    PizzaTypeToppingQuantityCreateSchema,
+)
+from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
 from app.api.v1.endpoints.topping.schemas import ToppingCreateSchema
-from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema, PizzaTypeToppingQuantityCreateSchema
 from app.database.connection import SessionLocal
+from app.database.models import SpicinessType
 
 
 @pytest.fixture(scope='module')
@@ -29,7 +30,7 @@ def db():
 def sample_dough(db):
     dough = DoughCreateSchema(
         name=f'Test Dough {uuid.uuid4()}',
-        price=Decimal('1.50'),
+        price=1.50,
         description='Test dough',
         stock=10
     )
@@ -42,7 +43,7 @@ def sample_dough(db):
 def sample_topping(db):
     topping = ToppingCreateSchema(
         name=f'Test Topping {uuid.uuid4()}',
-        price=Decimal('0.50'),
+        price=0.50,
         description='Test topping',
         stock=20
     )
@@ -51,12 +52,11 @@ def sample_topping(db):
     topping_crud.delete_topping_by_id(db_topping.id, db)
 
 
-# --- NEU: Sauce Fixture ---
 @pytest.fixture
 def sample_sauce(db):
     sauce = SauceCreateSchema(
         name=f'Test Sauce {uuid.uuid4()}',
-        price=Decimal('0.50'),
+        price=0.50,
         description='Stock test sauce',
         stock=20,
         spiciness=SpicinessType.LIGHT
@@ -67,22 +67,26 @@ def sample_sauce(db):
 
 
 @pytest.fixture
-def sample_pizza_type(db, sample_dough, sample_topping, sample_sauce):  # <--- sample_sauce übergeben
+def sample_pizza_type(db, sample_dough, sample_topping, sample_sauce):
     """Create a test pizza type with dough, sauce and topping and clean it up after"""
-    pizza_type = PizzaTypeCreateSchema(
+    # First create the pizza type without toppings
+    pizza_type_schema = PizzaTypeCreateSchema(
         name=f'Test Pizza {uuid.uuid4()}',
-        price=Decimal('8.00'),
+        price=8.00,
         description='Test pizza',
         dough_id=sample_dough.id,
-        sauce_id=sample_sauce.id,  # <--- HIER GEFIXT: Sauce ID hinzufügen
-        toppings=[
-            PizzaTypeToppingQuantityCreateSchema(
-                topping_id=sample_topping.id,
-                quantity=2
-            )
-        ]
+        sauce_id=sample_sauce.id
     )
-    db_pizza_type = pizza_type_crud.create_pizza_type(pizza_type, db)
+    
+    db_pizza_type = pizza_type_crud.create_pizza_type(pizza_type_schema, db)
+    
+    # Then add the topping
+    topping_quantity = PizzaTypeToppingQuantityCreateSchema(
+        topping_id=sample_topping.id,
+        quantity=2
+    )
+    pizza_type_crud.add_topping_to_pizza_type(db_pizza_type.id, topping_quantity, db)
+
     yield db_pizza_type
     pizza_type_crud.delete_pizza_type_by_id(db_pizza_type.id, db)
 
