@@ -1,66 +1,92 @@
-import uuid
-
-from sqlalchemy.orm import Session
-
-from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
-from app.database.models import Sauce
+import pytest
+from app.api.v1.endpoints.sauce import crud
+from app.schemas.sauce import SauceCreateSchema  # Adjust import path as needed
 
 
-def create_sauce(schema: SauceCreateSchema, db: Session):
-    entity = Sauce(**schema.model_dump())
-    db.add(entity)
-    db.commit()
+# --- Tests for check_sauce_availability ---
 
-    return entity
+def test_check_sauce_availability_success(db):
+    """Test that availability returns True when stock is positive."""
+    # 1. Create a sauce with stock
+    sauce_in = SauceCreateSchema(name="Spicy Marinara", stock=10)
+    created_sauce = crud.create_sauce(db=db, schema=sauce_in)
 
+    # 2. Check availability
+    is_available = crud.check_sauce_availability(db=db, sauce_id=created_sauce.id)
 
-def get_sauce_by_id(sauce_id: uuid.UUID, db: Session):
-    entity = db.query(Sauce).filter(Sauce.id == sauce_id).first()
-    return entity
-
-
-def get_sauce_by_name(sauce_name: str, db: Session):
-    entity = db.query(Sauce).filter(Sauce.name == sauce_name).first()
-    return entity
+    assert is_available is True
 
 
-def get_all_sauces(db: Session):
-    return db.query(Sauce).all()
+def test_check_sauce_availability_no_stock(db):
+    """Test that availability returns False when stock is 0."""
+    sauce_in = SauceCreateSchema(name="Empty Marinara", stock=0)
+    created_sauce = crud.create_sauce(db=db, schema=sauce_in)
+
+    is_available = crud.check_sauce_availability(db=db, sauce_id=created_sauce.id)
+
+    assert is_available is False
 
 
-def update_sauce(sauce: Sauce, changed_sauce: SauceCreateSchema, db: Session):
-    for key, value in changed_sauce.model_dump().items():
-        setattr(sauce, key, value)
+def test_check_sauce_availability_not_found(db):
+    """Test that availability returns False for non-existent ID."""
+    import uuid
+    random_id = uuid.uuid4()
 
-    db.commit()
-    db.refresh(sauce)
+    is_available = crud.check_sauce_availability(db=db, sauce_id=random_id)
 
-    return sauce
-
-
-def delete_sauce_by_id(sauce_id: uuid.UUID, db: Session):
-    entity = get_sauce_by_id(sauce_id, db)
-    if entity:
-        db.delete(entity)
-        db.commit()
+    assert is_available is False
 
 
-def check_sauce_availability(sauce_id: uuid.UUID, db: Session):
-    sauce = get_sauce_by_id(sauce_id, db)
-    if sauce and sauce.stock > 0:
-        return True
-    return False
+# --- Tests for change_stock_of_sauce ---
+
+def test_change_stock_add_amount(db):
+    """Test adding stock to an existing sauce."""
+    sauce_in = SauceCreateSchema(name="Stock Sauce", stock=10)
+    created_sauce = crud.create_sauce(db=db, schema=sauce_in)
+
+    # Add 5 to stock
+    result = crud.change_stock_of_sauce(db=db, sauce_id=created_sauce.id, amount=5)
+
+    # Refresh to check DB
+    db.refresh(created_sauce)
+
+    assert result is True
+    assert created_sauce.stock == 15
 
 
-def change_stock_of_sauce(sauce_id: uuid.UUID, amount: int, db: Session):
-    sauce = get_sauce_by_id(sauce_id, db)
-    if sauce:
-        # Prevent stock from going negative
-        if amount < 0 and (sauce.stock + amount < 0):
-            return False
+def test_change_stock_reduce_valid(db):
+    """Test reducing stock (valid amount)."""
+    sauce_in = SauceCreateSchema(name="Reduce Sauce", stock=10)
+    created_sauce = crud.create_sauce(db=db, schema=sauce_in)
 
-        sauce.stock += amount
-        db.commit()
-        db.refresh(sauce)
-        return True
-    return False
+    # Remove 3
+    result = crud.change_stock_of_sauce(db=db, sauce_id=created_sauce.id, amount=-3)
+
+    db.refresh(created_sauce)
+
+    assert result is True
+    assert created_sauce.stock == 7
+
+
+def test_change_stock_reduce_invalid(db):
+    """Test that stock cannot go below zero."""
+    sauce_in = SauceCreateSchema(name="Low Stock Sauce", stock=5)
+    created_sauce = crud.create_sauce(db=db, schema=sauce_in)
+
+    # Try to remove 10 (should fail because 5 - 10 < 0)
+    result = crud.change_stock_of_sauce(db=db, sauce_id=created_sauce.id, amount=-10)
+
+    db.refresh(created_sauce)
+
+    assert result is False
+    assert created_sauce.stock == 5  # Stock should remain unchanged
+
+
+def test_change_stock_not_found(db):
+    """Test changing stock for a non-existent sauce."""
+    import uuid
+    random_id = uuid.uuid4()
+
+    result = crud.change_stock_of_sauce(db=db, sauce_id=random_id, amount=5)
+
+    assert result is False
