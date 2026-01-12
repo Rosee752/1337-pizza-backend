@@ -2,6 +2,7 @@ import decimal
 import uuid
 
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
 
 import app.api.v1.endpoints.sauce.crud as sauce_crud
@@ -251,7 +252,7 @@ def test_change_stock_of_non_existent_sauce(db):
 
 def test_api_read_all_sauces(client, sample_sauce):
     response = client.get('/v1/sauces')
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert len(response.json()) > 0
 
 
@@ -269,7 +270,7 @@ def test_api_create_sauce(client, db):
     response = client.post('/v1/sauces', json=sauce_data)
 
     # assert
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert data['name'] == sauce_data['name']
     assert 'id' in data
@@ -292,18 +293,18 @@ def test_api_create_sauce_duplicate_name(client, sample_sauce):
     response = client.post('/v1/sauces', json=sauce_data, follow_redirects=False)
 
     # assert
-    assert response.status_code == 303
+    assert response.status_code == status.HTTP_303_SEE_OTHER
 
 
 def test_api_read_sauce_by_id(client, sample_sauce):
     response = client.get(f'/v1/sauces/{sample_sauce.id}')
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json()['id'] == str(sample_sauce.id)
 
 
 def test_api_read_sauce_by_id_not_found(client):
     response = client.get(f'/v1/sauces/{uuid.uuid4()}')
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_api_update_sauce_same_name(client, function_sauce):
@@ -321,7 +322,7 @@ def test_api_update_sauce_same_name(client, function_sauce):
     response = client.put(f'/v1/sauces/{sauce_id}', json=update_data)
 
     # assert
-    assert response.status_code == 204
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # verify update
     # We need to refresh from DB or check via API
@@ -346,7 +347,7 @@ def test_api_update_sauce_new_name_unique(client, function_sauce, db):
 
     # assert
     # According to router logic, this creates a NEW sauce and returns 201
-    assert response.status_code == 201
+    assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert data['name'] == new_name
     assert data['id'] != str(sauce_id)
@@ -371,7 +372,7 @@ def test_api_update_sauce_new_name_conflict(client, function_sauce, sample_sauce
     response = client.put(f'/v1/sauces/{sauce_id}', json=update_data, follow_redirects=False)
 
     # assert
-    assert response.status_code == 303
+    assert response.status_code == status.HTTP_303_SEE_OTHER
 
 
 def test_api_update_sauce_not_found(client):
@@ -383,18 +384,18 @@ def test_api_update_sauce_not_found(client):
         'spiciness': 'LIGHT'
     }
     response = client.put(f'/v1/sauces/{uuid.uuid4()}', json=update_data)
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_api_delete_sauce(client, function_sauce):
     response = client.delete(f'/v1/sauces/{function_sauce.id}')
-    assert response.status_code == 204
+    assert response.status_code == status.HTTP_204_NO_CONTENT
 
     # verify deletion
     response_get = client.get(f'/v1/sauces/{function_sauce.id}')
-    assert response_get.status_code == 404
+    assert response_get.status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_api_delete_sauce_not_found(client):
     response = client.delete(f'/v1/sauces/{uuid.uuid4()}')
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
