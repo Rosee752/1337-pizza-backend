@@ -1,0 +1,73 @@
+test_name: Check sauce stock management
+
+includes:
+  - !include ../../../common.yaml
+
+stages:
+  - name: Create a Sauce (Stock 1)
+    request:
+      url: "{host}/api/v1/sauces"
+      method: POST
+      json:
+        name: "Test Sauce"
+        description: "Test"
+        price: 0.50
+        spiciness: "mild"
+        stock: 1
+    response:
+      status_code: 201
+      save:
+        json:
+          id: sauce_id
+
+  - name: Create a Pizza Type (Linked to Sauce)
+    request:
+      url: "{host}/api/v1/pizza_types"
+      method: POST
+      json:
+        name: "Sauce Test Pizza"
+        price: 10.0
+        description: "Testing sauce stock"
+        dough_id: "{dough_id}"
+        sauce_id: "{sauce_id}"  # This works now!
+    response:
+      status_code: 201
+      save:
+        json:
+          id: pizza_type_id
+
+  - name: Create Order
+    request:
+      url: "{host}/api/v1/orders"
+      method: POST
+      json:
+        user_id: "{user_id}"
+        address:
+           street: "Test St"
+           zip_code: "12345"
+           city: "Test City"
+    response:
+      status_code: 201
+      save:
+        json:
+          id: order_id
+
+  - name: Add pizza (Consumes the last sauce)
+    request:
+      url: "{host}/api/v1/orders/{order_id}/pizzas"
+      method: POST
+      json:
+        pizza_type_id: "{pizza_type_id}"
+        quantity: 1
+    response:
+      status_code: 200
+
+  - name: Try to add another pizza (Should fail - Out of Stock)
+    request:
+      url: "{host}/api/v1/orders/{order_id}/pizzas"
+      method: POST
+      json:
+        pizza_type_id: "{pizza_type_id}"
+        quantity: 1
+    response:
+      status_code: 409

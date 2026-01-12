@@ -43,3 +43,24 @@ def delete_sauce_by_id(sauce_id: uuid.UUID, db: Session):
     if entity:
         db.delete(entity)
         db.commit()
+
+
+def check_sauce_availability(sauce_id: uuid.UUID, db: Session):
+    sauce = get_sauce_by_id(sauce_id, db)
+    if sauce and sauce.stock > 0:
+        return True
+    return False
+
+
+def change_stock_of_sauce(sauce_id: uuid.UUID, amount: int, db: Session):
+    sauce = get_sauce_by_id(sauce_id, db)
+    if sauce:
+        # Prevent stock from going negative
+        if amount < 0 and (sauce.stock + amount < 0):
+            return False
+
+        sauce.stock += amount
+        db.commit()
+        db.refresh(sauce)
+        return True
+    return False

@@ -20,7 +20,7 @@ from app.api.v1.endpoints.order.schemas \
 from app.api.v1.endpoints.user.schemas import UserSchema
 from app.database.connection import SessionLocal
 from app.api.v1.endpoints.order.schemas import OrderStatus
-
+import app.api.v1.endpoints.sauce.crud as sauce_crud
 router = APIRouter()
 
 
@@ -129,7 +129,8 @@ def delete_order(
     if ordered_pizzas:
         for pizza in ordered_pizzas:
             stock_ingredients_crud.increase_stock_of_ingredients(pizza.pizza_type, db)
-            logging.info(f'pizza with id:{pizza.id} deleted. Stock for pizza type: {pizza.pizza_type} increased\n')
+            sauce_crud.change_stock_of_sauce(pizza.pizza_type.sauce_id, 1, db)
+            logging.info(f'pizza with id:{pizza.id} deleted. Stock for pizza type: {pizza.pizza_type} and sauce got increased\n')
     order_beverages = order_crud.get_joined_beverage_quantities_by_order(order_id, db)
     if order_beverages:
         for order_beverage in order_beverages:
@@ -157,10 +158,22 @@ def add_pizza_to_order(
         logging.fatal(f'tried to update order with id: {order_id}.'
                       f' but could not find pizza type:{schema.pizza_type_id}\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
+
+    if not sauce_crud.check_sauce_availability(pizza_type.sauce_id, db):
+        logging.fatal(f'Sauce for pizza type {pizza_type.name} is not available')
+        return Response(status_code=status.HTTP_409_CONFLICT)
+
+    sauce_crud.change_stock_of_sauce(pizza_type.sauce_id, -1, db)
+
+
     if not stock_ingredients_crud.ingredients_are_available(pizza_type):
         logging.fatal(f'tried to update order with id: {order_id}.'
                       f' but ingredients for pizza type: {pizza_type} are not available\n')
+
+        sauce_crud.change_stock_of_sauce(pizza_type.sauce_id, 1, db)
+
         return Response(status_code=status.HTTP_409_CONFLICT)
+
     stock_ingredients_crud.reduce_stock_of_ingredients(pizza_type, db)
     pizza = order_crud.add_pizza_to_order(order, pizza_type, db)
     logging.info(f'pizza with id: {pizza.id} was successfully added to order: {order_id}\n')
@@ -199,6 +212,8 @@ def delete_pizza_from_order(
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
     stock_ingredients_crud.increase_stock_of_ingredients(pizza_entity.pizza_type, db)
+    sauce_crud.change_stock_of_sauce(pizza_entity.pizza_type.sauce_id, 1, db)
+    logging.info(f'Restored sauce stock for pizza: {pizza.id}\n')
     logging.info(f'pizza with id: {pizza.id} will be deleted from order: {order_id} so stock got increased\n')
 
     if not order_crud.delete_pizza_from_order(order, pizza.id, db):
