@@ -8,6 +8,7 @@ includes:
   - !include ../dough/dough_stage.yaml
   - !include ../pizza_type/pizza_type_stage.yaml
   - !include ../users/user_stage.yaml
+  - !include ../sauce/sauce_stage.yaml
 
 stages:
   #Create User
@@ -21,6 +22,9 @@ stages:
   #Create Dough
   - type: ref
     id: create_dough
+
+  - type: ref
+    id: create_sauce
 
   #Create pizza_type
   - type: ref
@@ -140,3 +144,6 @@ stages:
   #Delete user
   - type: ref
     id: delete_user
+
+  - type: ref
+    id: delete_sauce
