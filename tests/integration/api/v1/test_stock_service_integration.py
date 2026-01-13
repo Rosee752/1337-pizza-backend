@@ -1,4 +1,4 @@
-#import pytest
+import pytest
 from decimal import Decimal
 import uuid
 from sqlalchemy.orm import Session
@@ -16,7 +16,7 @@ import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
 from app.database.models import SpicinessType
 
-# --- SERVICE IMPORTS (Testing the logic directly) ---
+# --- SERVICE IMPORTS ---
 from app.api.v1.services.stock_service import (
     validate_and_reduce_ingredients,
     increase_stock_of_ingredients
@@ -71,7 +71,7 @@ def sample_pizza_type(db: Session):
     dough_crud.delete_dough_by_id(dough.id, db)
 
 
-# --- TESTS (Replacing the TestClient Logic) ---
+# --- TESTS ---
 
 def test_stock_reduction_success(db: Session, sample_pizza_type):
     """
@@ -79,10 +79,10 @@ def test_stock_reduction_success(db: Session, sample_pizza_type):
     Verifies that calling the service reduces stock by 1.
     """
     # Arrange
-    initial_dough = sample_pizza_type.dough.stock # 10
-    initial_sauce = sample_pizza_type.sauce.stock # 10
+    initial_dough = sample_pizza_type.dough.stock  # 10
+    initial_sauce = sample_pizza_type.sauce.stock  # 10
 
-    # Act (Simulate Order Creation)
+    # Act
     validate_and_reduce_ingredients(sample_pizza_type, db)
 
     # Assert
@@ -99,10 +99,10 @@ def test_stock_restoration_success(db: Session, sample_pizza_type):
     Verifies that calling the service increases stock by 1.
     """
     # Arrange
-    initial_dough = sample_pizza_type.dough.stock # 10
-    initial_sauce = sample_pizza_type.sauce.stock # 10
+    initial_dough = sample_pizza_type.dough.stock  # 10
+    initial_sauce = sample_pizza_type.sauce.stock  # 10
 
-    # Act (Simulate Order Deletion)
+    # Act
     increase_stock_of_ingredients(sample_pizza_type, db)
 
     # Assert
@@ -125,5 +125,5 @@ def test_stock_reduction_fails_if_no_sauce(db: Session, sample_pizza_type):
     with pytest.raises(HTTPException) as exc:
         validate_and_reduce_ingredients(sample_pizza_type, db)
 
-    assert exc.value.status_code == 409
-    assert "Sauce" in exc.value.detail
+    assert exc.value.status_code == 409  # noqa: PLR2004
+    assert 'Sauce' in exc.value.detail
