@@ -43,6 +43,9 @@ class PizzaType(Base):
                                                                       back_populates='pizza_type')
     type: Mapped[str] = mapped_column(nullable=True)
 
+    sauce_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('sauce.id'), nullable=False)
+    sauce: Mapped['Sauce'] = relationship()
+
     __mapper_args__ = {
         'polymorphic_identity': 'PizzaType',
         'polymorphic_on': type,

@@ -11,14 +11,17 @@ import app.api.v1.endpoints.beverage.crud as beverage_crud
 import app.api.v1.endpoints.dough.crud as dough_crud
 from app.api.v1.endpoints.order.address.schemas import AddressCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderCreateSchema
+from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
 from app.api.v1.endpoints.user.schemas import UserCreateSchema
 from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderBeverageQuantityCreateSchema
 from app.api.v1.endpoints.beverage.schemas import BeverageCreateSchema
 from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
-from app.database.models import Order, User, Dough, PizzaType
+from app.database.models import Order, User, Dough, PizzaType, SpicinessType
 from app.database.connection import SessionLocal
 from app.api.v1.endpoints.order.schemas import OrderStatus
+import app.api.v1.endpoints.sauce.crud as sauce_crud
+from app.database.models import Sauce
 
 
 # --- Fixtures ---
@@ -229,11 +232,21 @@ def test_order_pizza(db: Session, sample_order: Order):
     )
     created_dough: Dough = dough_crud.create_dough(dough, db)
 
+    sauce = SauceCreateSchema(
+        name='test sauce',
+        description='test sauce disc.',
+        price=1,
+        spiciness=SpicinessType.LIGHT,
+        stock = 20
+    )
+    created_sauce:Sauce = sauce_crud.create_sauce(sauce, db)
+
     pizza = PizzaTypeCreateSchema(
         name='test pizza type',
         description='test pizza type disc.',
         price=2,
-        dough_id=created_dough.id
+        dough_id=created_dough.id,
+        sauce_id=created_sauce.id
     )
     created_pizza_type: PizzaType = pizza_type_crud.create_pizza_type(pizza, db)
 

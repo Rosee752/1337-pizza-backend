@@ -2,9 +2,13 @@ import pytest
 from decimal import Decimal
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
+from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
 from app.database.connection import SessionLocal
 from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
 from app.api.v1.endpoints.dough import crud as dough_crud
+from app.database.models import SpicinessType
+import app.api.v1.endpoints.sauce.crud as sauce_crud
+
 
 @pytest.fixture(scope='module')
 def db():
@@ -32,12 +36,23 @@ def test_pizza_type_create_read_delete(db):
     created_dough = dough_crud.create_dough(test_dough, db)
     created_dough_id = created_dough.id
 
+    test_sauce = SauceCreateSchema(
+        name='Test Sauce',
+        price=Decimal('1.00'),
+        description='Standard sauce for test',
+        spiciness= SpicinessType.LIGHT,
+        stock=10
+    )
+    created_sauce = sauce_crud.create_sauce(test_sauce, db)
+    created_sauce_id = created_sauce.id
+
     # Arrange: Create a new PizzaType object
     pizza_type = PizzaTypeCreateSchema(
         name=new_pizza_type_name,
         price=new_pizza_type_price,
         description=new_pizza_type_description,
-        dough_id = created_dough_id
+        dough_id = created_dough_id,
+        sauce_id = created_sauce_id
     )
 
     # Act: Add pizza_type to database
@@ -57,6 +72,7 @@ def test_pizza_type_create_read_delete(db):
     assert read_pizza_type.price == new_pizza_type_price
     assert read_pizza_type.description == new_pizza_type_description
     assert read_pizza_type.dough_id == created_dough_id
+    assert read_pizza_type.sauce_id == created_sauce_id
 
     # Act: Delete pizza_type
     pizza_type_crud.delete_pizza_type_by_id(created_pizza_type_id, db)
