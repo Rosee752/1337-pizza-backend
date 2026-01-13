@@ -11,18 +11,18 @@ import app.api.v1.endpoints.beverage.crud as beverage_crud
 import app.api.v1.endpoints.dough.crud as dough_crud
 from app.api.v1.endpoints.order.address.schemas import AddressCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderCreateSchema
-from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
 from app.api.v1.endpoints.user.schemas import UserCreateSchema
 from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderBeverageQuantityCreateSchema
 from app.api.v1.endpoints.beverage.schemas import BeverageCreateSchema
 from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
-from app.database.models import Order, User, Dough, PizzaType, SpicinessType
+from app.database.models import Order, User, Dough, PizzaType, Sauce
 from app.database.connection import SessionLocal
 from app.api.v1.endpoints.order.schemas import OrderStatus
+import decimal
 import app.api.v1.endpoints.sauce.crud as sauce_crud
-from app.database.models import Sauce
-
+from app.api.v1.endpoints.sauce.schemas import SpicinessType
+import app.api.v1.endpoints.sauce.schemas as sauce_schemas
 
 # --- Fixtures ---
 
@@ -114,6 +114,29 @@ def order_factory(db: Session, sample_user: User):
         except Exception:
             pass
 
+@pytest.fixture(scope='module')
+def sample_sauce(db):
+    # arrange
+    test_name = 'test_name'
+    test_description = 'test_description'
+    test_stock = 10
+    test_price = decimal.Decimal(3.50)
+    test_spiciness = SpicinessType.HOT
+
+    # act
+    sauce = sauce_schemas.SauceCreateSchema(
+        name=test_name,
+        description=test_description,
+        stock=test_stock,
+        price=test_price,
+        spiciness=test_spiciness,
+    )
+
+    new_sauce = sauce_crud.create_sauce(schema=sauce, db=db)
+    created_sauce_id = new_sauce.id
+    yield new_sauce
+
+    sauce_crud.delete_sauce_by_id(created_sauce_id,db=db)
 
 # --- Tests ---
 
@@ -218,7 +241,7 @@ def test_order_address(db):
     assert len(number_of_addresses_before) == len(number_of_addresses_after)
 
 
-def test_order_pizza(db: Session, sample_order: Order):
+def test_order_pizza(db: Session, sample_order: Order, sample_sauce: Sauce):
     """This test now uses the sample_order fixture, removing duplication."""
 
     # arrange
@@ -232,21 +255,12 @@ def test_order_pizza(db: Session, sample_order: Order):
     )
     created_dough: Dough = dough_crud.create_dough(dough, db)
 
-    sauce = SauceCreateSchema(
-        name='test sauce',
-        description='test sauce disc.',
-        price=1,
-        spiciness=SpicinessType.LIGHT,
-        stock = 20
-    )
-    created_sauce:Sauce = sauce_crud.create_sauce(sauce, db)
-
     pizza = PizzaTypeCreateSchema(
         name='test pizza type',
         description='test pizza type disc.',
         price=2,
         dough_id=created_dough.id,
-        sauce_id=created_sauce.id
+        sauce_id=sample_sauce.id
     )
     created_pizza_type: PizzaType = pizza_type_crud.create_pizza_type(pizza, db)
 
