@@ -45,11 +45,24 @@ def delete_pizza_type_by_id(pizza_type_id: uuid.UUID, db: Session):
         db.commit()
 
 
-def create_topping_quantity(
-        pizza_type: PizzaType,
+def add_topping_to_pizza_type(
+        pizza_type_id: uuid.UUID,  # Note: The test sends an ID, not the object
         schema: PizzaTypeToppingQuantityCreateSchema,
         db: Session,
 ):
+    # Fetch the object first if you need to append to the relationship
+    pizza_type = get_pizza_type_by_id(pizza_type_id, db)
+    if not pizza_type:
+        return None
+
+    entity = PizzaTypeToppingQuantity(**schema.model_dump())
+    # Explicitly set the foreign key since we are creating the association object directly
+    entity.pizza_type_id = pizza_type_id
+
+    db.add(entity)
+    db.commit()
+    db.refresh(entity)
+    return entity
     entity = PizzaTypeToppingQuantity(**schema.model_dump())
     pizza_type.toppings.append(entity)
     db.commit()
