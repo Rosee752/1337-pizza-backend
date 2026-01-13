@@ -13,7 +13,7 @@ def validate_and_reduce_ingredients(pizza_type: PizzaType, db: Session):
     if not dough or dough.stock < 1:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Not enough stock for Dough: {dough.name if dough else pizza_type.dough_id}",
+            detail=f'Not enough stock for Dough: {dough.name if dough else pizza_type.dough_id}',
         )
     dough.stock -= 1
 
@@ -22,7 +22,7 @@ def validate_and_reduce_ingredients(pizza_type: PizzaType, db: Session):
     if not sauce or sauce.stock < 1:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Not enough stock for Sauce: {sauce.name if sauce else pizza_type.sauce_id}",
+            detail=f'Not enough stock for Sauce: {sauce.name if sauce else pizza_type.sauce_id}',
         )
     sauce.stock -= 1
 
@@ -34,7 +34,7 @@ def validate_and_reduce_ingredients(pizza_type: PizzaType, db: Session):
         if not topping or topping.stock < qty_needed:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Not enough stock for Topping: {topping.name if topping else pt_topping.topping_id}",
+                detail=f'Not enough stock for Topping: {topping.name if topping else pt_topping.topping_id}',
             )
         topping.stock -= qty_needed
 

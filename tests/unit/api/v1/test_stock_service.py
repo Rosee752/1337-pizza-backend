@@ -5,6 +5,7 @@ from app.api.v1.services.stock_service import validate_and_reduce_ingredients
 
 
 def test_validate_and_reduce_ingredients_success():
+    # Setup Mocks
     mock_db = MagicMock()
 
     # Mock Pizza Type
@@ -18,7 +19,7 @@ def test_validate_and_reduce_ingredients_success():
     mock_topping_assoc.quantity = 2
     mock_pt.toppings = [mock_topping_assoc]
 
-    # Mock DB returns
+    # Mock DB returns (Enough Stock)
     mock_dough = MagicMock()
     mock_dough.stock = 10
 
@@ -28,16 +29,16 @@ def test_validate_and_reduce_ingredients_success():
     mock_topping = MagicMock()
     mock_topping.stock = 20
 
-    # Setup Side Effects for DB Queries
+    # Setup Side Effects for DB Queries to return the correct mock
     def query_side_effect(model):
         query_mock = MagicMock()
         first_mock = query_mock.filter.return_value.with_for_update.return_value.first
 
-        if "Dough" in str(model):
+        if 'Dough' in str(model):
             first_mock.return_value = mock_dough
-        elif "Sauce" in str(model):
+        elif 'Sauce' in str(model):
             first_mock.return_value = mock_sauce
-        elif "Topping" in str(model):
+        elif 'Topping' in str(model):
             first_mock.return_value = mock_topping
         return query_mock
 
@@ -47,44 +48,46 @@ def test_validate_and_reduce_ingredients_success():
     validate_and_reduce_ingredients(mock_pt, mock_db)
 
     # Assert Reductions
-    assert mock_dough.stock == 9
-    assert mock_sauce.stock == 4
-    assert mock_topping.stock == 18  # 20 - 2
+    assert mock_dough.stock == 9  # noqa: PLR2004
+    assert mock_sauce.stock == 4  # noqa: PLR2004
+    assert mock_topping.stock == 18  # noqa: PLR2004
     mock_db.commit.assert_called_once()
 
 
 def test_validate_and_reduce_ingredients_no_sauce_stock():
+    # Setup Mocks
     mock_db = MagicMock()
     mock_pt = MagicMock()
     mock_pt.dough_id = 1
     mock_pt.sauce_id = 2
     mock_pt.toppings = []
 
+    # Mock DB returns
     mock_dough = MagicMock()
     mock_dough.stock = 10
 
     mock_sauce = MagicMock()
-    mock_sauce.stock = 0  # Empty
+    mock_sauce.stock = 0  # Empty Stock!
 
     def query_side_effect(model):
         query_mock = MagicMock()
         first_mock = query_mock.filter.return_value.with_for_update.return_value.first
-        if "Dough" in str(model):
+        if 'Dough' in str(model):
             first_mock.return_value = mock_dough
-        elif "Sauce" in str(model):
+        elif 'Sauce' in str(model):
             first_mock.return_value = mock_sauce
         return query_mock
 
     mock_db.query.side_effect = query_side_effect
 
+    # Execute and Expect Error
     with pytest.raises(HTTPException) as exc:
         validate_and_reduce_ingredients(mock_pt, mock_db)
 
-    assert exc.value.status_code == 409
-    assert "Sauce" in exc.value.detail
+    # Assert
+    assert exc.value.status_code == 409  # noqa: PLR2004
+    assert 'Sauce' in exc.value.detail
 
-
-# ... keep existing tests ...
 
 def test_increase_stock_of_ingredients_success():
     mock_db = MagicMock()
@@ -110,11 +113,11 @@ def test_increase_stock_of_ingredients_success():
     def query_side_effect(model):
         query_mock = MagicMock()
         first_mock = query_mock.filter.return_value.with_for_update.return_value.first
-        if "Dough" in str(model):
+        if 'Dough' in str(model):
             first_mock.return_value = mock_dough
-        elif "Sauce" in str(model):
+        elif 'Sauce' in str(model):
             first_mock.return_value = mock_sauce
-        elif "Topping" in str(model):
+        elif 'Topping' in str(model):
             first_mock.return_value = mock_topping
         return query_mock
 
@@ -127,7 +130,7 @@ def test_increase_stock_of_ingredients_success():
     increase_stock_of_ingredients(mock_pt, mock_db)
 
     # Assert Increases
-    assert mock_dough.stock == 11
-    assert mock_sauce.stock == 6
-    assert mock_topping.stock == 22
+    assert mock_dough.stock == 11  # noqa: PLR2004
+    assert mock_sauce.stock == 6  # noqa: PLR2004
+    assert mock_topping.stock == 22  # noqa: PLR2004
     mock_db.commit.assert_called_once()
