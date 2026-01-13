@@ -99,14 +99,33 @@ If you like it convenient: Add a button for ruff to your toolbar!
 # GrayLog
 
 - What is the purpose of GrayLog?
+  - to help developers track the log messages of an API and help them to find bugs more quickly
 
 - What logging levels are available?
+  - fatal
+  - error
+  - warning
+  - info
+  - debug
+  - trace
 
 - What is the default logging level?
+  - the default logging level should be info
 
 - Give 3-4 examples for logging commands in Python:
   ```python
-
+    logging.warning(f'tried to delete pizza: {pizza.id} from order: {order_id}'
+                      f' but could not find such pizza\n')
+    
+    logging.info(f'found old order with id:{copy_order_id}\n')
+  
+    log_message = (
+                f'the beverage with name: {changed_beverage.name} was updated successfully:\n'
+                f'new beverage description: {changed_beverage.description}\n'
+                f'new beverage name: {changed_beverage.name}\n'
+                f'new beverage stock: {changed_beverage.stock}\n'
+            )
+            logging.info(log_message)
   ```
 
 # SonarQube

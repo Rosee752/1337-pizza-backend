@@ -1,4 +1,5 @@
 ---
+
 test_name: Make sure server implements crud functionality for order endpoint
 
 includes:
@@ -12,7 +13,7 @@ stages:
 
 #---------------------------Create Order---------------------------
   #Create Order
-  - name: Verify that status code equals 201 when we create a new order
+  - name: Verify that status code equals 201 when we create a new order and the order is returned
     request:
       url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order
       method: POST
@@ -58,7 +59,6 @@ stages:
         address:
           <<: *address
           id: "{address_id}"
-        # WICHTIG: Hier auf OPEN geändert, da du das Enum geändert hast!
         order_status: "OPEN"
 
   #Get all Orders
@@ -72,55 +72,6 @@ stages:
         - function: tests.service.api.v1.order.testing_utils:check_for_id_in_response_list
           extra_kwargs:
             element_id: "{order_id}"
-
-#---------------------- NEUE TESTS START (User Stories) ----------------------
-
-  # Test Filter: Check if order is found with status OPEN
-  - name: Filter orders by status OPEN
-    request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order
-      method: GET
-      params:
-        statuses: "OPEN" # Dein Router erwartet 'statuses' (Plural)
-    response:
-      status_code: 200
-      # Wir prüfen vereinfacht, ob wir ein 200 OK zurückbekommen
-      # (Detail-Prüfung wäre mit verify_response_with möglich, aber so reicht es oft)
-
-  # Test Status Update: Change status to PREPARING
-  - name: Update order status to PREPARING
-    request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order/{order_id}/status
-      method: PATCH
-      json:
-        order_status: "PREPARING"
-    response:
-      status_code: 200
-      json:
-        id: "{order_id}"
-        order_status: "PREPARING"
-
-  # Test Filter nach Update: Check if order is found with status PREPARING
-  - name: Filter orders by status PREPARING
-    request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order
-      method: GET
-      params:
-        statuses: "PREPARING"
-    response:
-      status_code: 200
-
-  # Test Multi-Filter: Check if order is found when searching for OPEN or PREPARING
-  - name: Filter orders by multiple statuses
-    request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/order
-      method: GET
-      params:
-        statuses: ["OPEN", "PREPARING"]
-    response:
-      status_code: 200
-
-#---------------------- NEUE TESTS ENDE ----------------------
 
   #Get wrong Order
   - name: Check for status 404 if we try to get an order with a wrong id

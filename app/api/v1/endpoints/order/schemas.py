@@ -10,7 +10,7 @@ from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeBaseSchema
 
 
 class OrderStatus(str, Enum):
-    TRANSMITTED = 'TRANSMITTED'
+    OPEN = 'OPEN'
     PREPARING = 'PREPARING'
     IN_DELIVERY = 'IN_DELIVERY'
     COMPLETED = 'COMPLETED'
@@ -76,4 +76,9 @@ class JoinedOrderBeverageQuantitySchema(OrderBaseSchema, BeverageBaseSchema):
 
 class OrderUpdateOrderStatusSchema(OrderBaseSchema):
     id: uuid.UUID
+    order_status: OrderStatus
+
+
+
+class OrderStatusPatchSchema(BaseModel):
     order_status: OrderStatus

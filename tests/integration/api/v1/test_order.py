@@ -1,5 +1,6 @@
 import pytest
 import uuid
+from typing import List
 from sqlalchemy.orm import Session
 
 import app.api.v1.endpoints.order.crud as order_crud
@@ -8,6 +9,10 @@ import app.api.v1.endpoints.order.address.crud as address_crud
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 import app.api.v1.endpoints.beverage.crud as beverage_crud
 import app.api.v1.endpoints.dough.crud as dough_crud
+# --- NEUE IMPORTS FÜR SAUCE ---
+import app.api.v1.endpoints.sauce.crud as sauce_crud
+from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
+
 from app.api.v1.endpoints.order.address.schemas import AddressCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderCreateSchema
 from app.api.v1.endpoints.user.schemas import UserCreateSchema
@@ -15,8 +20,10 @@ from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderBeverageQuantityCreateSchema
 from app.api.v1.endpoints.beverage.schemas import BeverageCreateSchema
 from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
-from app.database.models import Order, User, Dough, PizzaType
+# --- NEUER IMPORT FÜR MODELLE ---
+from app.database.models import Order, User, Dough, PizzaType, SpicinessType
 from app.database.connection import SessionLocal
+from app.api.v1.endpoints.order.schemas import OrderStatus
 
 
 # --- Fixtures ---
@@ -71,6 +78,43 @@ def sample_order(db: Session, sample_user: User):
     # The associated address is deleted automatically via cascade
     # The user is deleted by the sample_user fixture
     order_crud.delete_order_by_id(db_order.id, db)
+
+@pytest.fixture
+def order_factory(db: Session, sample_user: User):
+    # Liste, um die erstellten Orders zu tracken (für das Cleanup)
+    created_orders = []
+
+    def _create_orders(count: int = 3) -> List[Order]:
+        new_orders = []
+        for i in range(count):
+            address = AddressCreateSchema(
+                street=f'test street {i}',
+                post_code=f'1234{i}',
+                house_number=10 + i,
+                country='test country',
+                town='test town',
+                first_name=f'test name {i}',
+                last_name='test last name'
+            )
+
+            created_order_schema = OrderCreateSchema(
+                address=address,
+                user_id=sample_user.id
+            )
+
+            db_order = order_crud.create_order(created_order_schema, db)
+            new_orders.append(db_order)
+            created_orders.append(db_order)
+
+        return new_orders
+
+    yield _create_orders
+
+    for order in created_orders:
+        try:
+            order_crud.delete_order_by_id(order.id, db)
+        except Exception:
+            pass
 
 
 # --- Tests ---
@@ -180,21 +224,32 @@ def test_order_pizza(db: Session, sample_order: Order):
     """This test now uses the sample_order fixture, removing duplication."""
 
     # arrange
-    # The 'sample_order' fixture has already created the user, address, and order.
-    # We just need to create the pizza-specific items.
+    # 1. Dough erstellen
     dough = DoughCreateSchema(
-        name='test dough',
+        name=f'test dough {uuid.uuid4()}',  # <--- HIER ÄNDERN (füge das f'' und {uuid.uuid4()} hinzu)
         description='test dough disc.',
         price=1,
         stock=25
     )
     created_dough: Dough = dough_crud.create_dough(dough, db)
 
+    # 2. Sauce erstellen (NEU HINZUGEFÜGT)
+    sauce = SauceCreateSchema(
+        name=f'test sauce {uuid.uuid4()}',
+        description='test sauce desc',
+        price=1,
+        stock=20,
+        spiciness=SpicinessType.LIGHT
+    )
+    created_sauce = sauce_crud.create_sauce(sauce, db)
+
+    # 3. Pizza erstellen (Jetzt mit sauce_id!)
     pizza = PizzaTypeCreateSchema(
         name='test pizza type',
         description='test pizza type disc.',
         price=2,
-        dough_id=created_dough.id
+        dough_id=created_dough.id,
+        sauce_id=created_sauce.id  # <--- HIER WAR DEIN FEHLER
     )
     created_pizza_type: PizzaType = pizza_type_crud.create_pizza_type(pizza, db)
 
@@ -208,25 +263,26 @@ def test_order_pizza(db: Session, sample_order: Order):
     assert len(order_pizzas) == number_of_pizzas_before + 1
     assert added_pizza.id == order_pizzas[0].id
 
-    # act
+    # act (delete from order)
     order_crud.delete_pizza_from_order(order=sample_order, pizza_id=added_pizza.id, db=db)
     deleted_pizza = order_crud.get_pizza_by_id(added_pizza.id, db)
 
     # assert
     assert deleted_pizza is None
 
-    # Cleanup: Order and user are deleted by fixtures.
-    # We only need to delete the items created *in this test*.
+    # Cleanup:
+    # 1. PizzaType löschen
     pizza_type_crud.delete_pizza_type_by_id(pizza_type_id=created_pizza_type.id, db=db)
+    # 2. Dough löschen
     dough_crud.delete_dough_by_id(dough_id=created_dough.id, db=db)
+    # 3. Sauce löschen (NEU)
+    sauce_crud.delete_sauce_by_id(sauce_id=created_sauce.id, db=db)
 
 
 def test_order_beverage(db: Session, sample_order: Order):
     """This test also uses the sample_order fixture, removing duplication."""
 
     # arrange
-    # The 'sample_order' fixture has already created the user, address, and order.
-    # We just need to create the beverage-specific items.
     beverage = BeverageCreateSchema(
         name='test beverage',
         description='test beverage disc.',
@@ -283,8 +339,67 @@ def test_order_beverage(db: Session, sample_order: Order):
     # assert
     assert len(joined_beverage_quantity) == added_beverage_quantity_2.quantity
 
-    # Cleanup: Order and user are deleted by fixtures.
-    # We only need to delete the items created *in this test*.
+    # Cleanup
     order_crud.delete_beverage_from_order(sample_order.id, added_beverage_quantity_2.beverage_id, db)
     beverage_crud.delete_beverage_by_id(created_beverage_id, db)
     beverage_crud.delete_beverage_by_id(created_beverage_id_2, db)
+
+def test_filter_order_by_status(db: Session, order_factory):
+    """This test also uses the sample_order fixture, removing duplication."""
+
+    #arrange
+    new_orders = order_factory(count=3)
+    test_status1 = OrderStatus.OPEN
+    test_status2 = OrderStatus.PREPARING
+
+    #act
+    filtered_orders = order_crud.get_order_by_status([test_status1], db)
+
+    #assert
+    for order in filtered_orders:
+        assert order.order_status == test_status1
+
+    #act
+    order_crud.update_order_status(new_orders[0], test_status2, db)
+    filtered_orders = order_crud.get_order_by_status([test_status1,test_status2], db)
+
+    #assert
+    for order in filtered_orders:
+        # LOGIK FEHLER BEHOBEN: 'or' funktioniert hier nicht wie gedacht
+        assert order.order_status in [test_status1, test_status2]
+
+    #act
+    order_crud.update_order_status(new_orders[2], OrderStatus.COMPLETED, db)
+    filtered_orders = order_crud.get_order_by_status([test_status1,test_status2], db)
+
+    # assert
+    for order in filtered_orders:
+        # LOGIK FEHLER BEHOBEN
+        assert order.order_status in [test_status1, test_status2]
+
+def test_update_order_status_logic(db: Session, order_factory):
+
+    orders = order_factory(count=1)
+    test_order = orders[0]
+    original_status = test_order.order_status
+
+    # Ziel-Status definieren (anders als der aktuelle)
+    target_status = OrderStatus.IN_DELIVERY
+
+    # ACT: Status ändern
+    updated_order = order_crud.update_order_status(
+        order=test_order,
+        changed_order=target_status,
+        db=db
+    )
+
+    # ASSERT
+    # 1. Prüfen, ob das Rückgabe-Objekt aktualisiert ist
+    assert updated_order.order_status == target_status
+    assert updated_order.id == test_order.id
+
+    # 2. Prüfen, ob es wirklich in der DB persistiert wurde
+    # dazu laden wir das Objekt frisch aus der DB
+    db.refresh(test_order)
+    assert test_order.order_status == target_status
+    assert test_order.order_status != original_status

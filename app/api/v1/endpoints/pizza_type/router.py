@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 import app.api.v1.endpoints.dough.crud as dough_crud
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 import app.api.v1.endpoints.topping.crud as topping_crud
+import app.api.v1.endpoints.sauce.crud as sauce_crud
 from app.api.v1.endpoints.beverage.router import HTTP_ERROR
 from app.api.v1.endpoints.dough.schemas import DoughSchema
+from app.api.v1.endpoints.sauce.schemas import SauceSchema
 from app.api.v1.endpoints.pizza_type.schemas import \
     JoinedPizzaTypeQuantitySchema, \
     PizzaTypeSchema, \
@@ -51,6 +53,10 @@ def create_pizza_type(
     if not dough:
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
+    if not sauce_crud.get_sauce_by_id(pizza_type.sauce_id, db):
+        logging.warning(f'sauce id {pizza_type.sauce_id} not found')
+        raise HTTPException(status_code=404, detail='Sauce not found')
+
     new_pizza_type = pizza_type_crud.create_pizza_type(pizza_type, db)
     logging.info(f'new pizza_type with name: {new_pizza_type.name} created\n')
     response.status_code = status.HTTP_201_CREATED
@@ -70,6 +76,11 @@ def update_pizza_type(
 
     if pizza_type_found:
         if pizza_type_found.name == changed_pizza_type.name:
+
+            if pizza_type_found.sauce_id != changed_pizza_type.sauce_id:
+                if not sauce_crud.get_sauce_by_id(changed_pizza_type.sauce_id, db):
+                    raise HTTPException(status_code=404, detail='Sauce not found')
+
             pizza_type_crud.update_pizza_type(pizza_type_found, changed_pizza_type, db)
             log_message = (
                 f'the pizza_type with name: {changed_pizza_type.name} was updated successfully:\n'
@@ -208,3 +219,22 @@ def get_pizza_type_dough(
     dough = pizza_type.dough
 
     return dough
+
+@router.get(
+    '/{pizza_type_id}/sauce',
+    response_model=SauceSchema,
+    tags=['pizza_type'],
+)
+def get_pizza_type_sauce(
+        pizza_type_id: uuid.UUID,
+        response: Response,
+        db: Session = Depends(get_db),
+):
+    pizza_type = pizza_type_crud.get_pizza_type_by_id(pizza_type_id, db)
+
+    if not pizza_type:
+        raise HTTPException(status_code=404, detail=HTTP_ERROR)
+
+    sauce = pizza_type.sauce
+
+    return sauce
