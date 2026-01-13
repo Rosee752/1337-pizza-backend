@@ -12,8 +12,6 @@ import app.api.v1.endpoints.user.crud as user_crud
 import app.api.v1.endpoints.order.crud as order_crud
 from app.api.v1.endpoints.beverage.router import HTTP_ERROR
 from app.api.v1.endpoints.order.stock_logic import stock_beverage_crud
-# New Service Import
-from app.api.v1.services import stock_service
 from app.api.v1.endpoints.order.schemas \
     import OrderSchema, PizzaCreateSchema, JoinedPizzaPizzaTypeSchema, \
     PizzaWithoutPizzaTypeSchema, OrderBeverageQuantityCreateSchema, JoinedOrderBeverageQuantitySchema, \
