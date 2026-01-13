@@ -5,6 +5,14 @@ test_name: Make sure server implements crud functionality for dough endpoint
 includes:
   - !include common.yaml
 
+variables:
+  dough_name: "Whole Grain {tavern.uid}"
+  dough_price: 1.5
+  dough_description: "Test Dough"
+  dough_stock: 10
+  # We also need a unique name for the "Update/Rename" test case
+  new_dough_name: "Italian Style {tavern.uid}"
+
 
 stages:
   - name: Verify that status code equals 201 when we create a new dough and the dough is returned
