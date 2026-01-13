@@ -16,15 +16,10 @@ class Base(DeclarativeBase):
 
 # Enum for OrderStatus
 class OrderStatus(str, enum.Enum):
-    OPEN = 'OPEN'
+    TRANSMITTED = 'TRANSMITTED'
     PREPARING = 'PREPARING'
     IN_DELIVERY = 'IN_DELIVERY'
     COMPLETED = 'COMPLETED'
-
-class SpicinessType(str, enum.Enum):
-    LIGHT = 'LIGHT'
-    MEDIUM = 'MEDIUM'
-    HOT = 'HOT'
 
 CASCADE_ALL_DELETE_ORPHAN = 'all, delete-orphan'
 # models
@@ -35,14 +30,10 @@ class PizzaType(Base):
 
     name: Mapped[str] = mapped_column(nullable=False, unique=True)
     price: Mapped[decimal.Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    description: Mapped[str] = mapped_column(String(255), nullable=False, default='')
+    description: Mapped[str] = mapped_column(String(30), nullable=False, default='')
 
     dough_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('dough.id'), nullable=False)
     dough: Mapped['Dough'] = relationship()
-
-    sauce_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('sauce.id'), nullable=False)
-    sauce: Mapped['Sauce'] = relationship()
-
     toppings: Mapped[List['PizzaTypeToppingQuantity']] = relationship(cascade = CASCADE_ALL_DELETE_ORPHAN,
                                                                       back_populates='pizza_type')
     type: Mapped[str] = mapped_column(nullable=True)
@@ -56,20 +47,6 @@ class PizzaType(Base):
         return "PizzaType(id='%s', name='%s', price='%s', description='%s', type='%s')" \
             % (self.id, self.name, self.price, self.description, self.type)
 
-class Sauce(Base):
-    __tablename__ = 'sauce'
-
-    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-
-    name: Mapped[str] = mapped_column(nullable=False, unique=True)
-    price: Mapped[decimal.Decimal] = mapped_column(Numeric(10, 2), nullable=False)
-    spiciness: Mapped[SpicinessType] = mapped_column(default=SpicinessType.LIGHT, nullable=False)
-    stock: Mapped[int] = mapped_column(NON_NEGATIVE_STOCK_CONSTRAINT,nullable=False)
-    description: Mapped[str] = mapped_column(String(255),nullable=False, default='')
-
-    def __repr__(self):
-        return "Sauce(id='%s', name='%s', price='%s', stock='%s', spiciness='%s', description='%s')" \
-            %(self.id, self.name, self.price, self.stock, self.spiciness, self.description)
 
 class PizzaTypeToppingQuantity(Base):
     __tablename__ = 'pizza_type_topping_quantity'
@@ -138,7 +115,7 @@ class Order(Base):
     pizzas: Mapped[List['Pizza']] = relationship(cascade = CASCADE_ALL_DELETE_ORPHAN)
     user: Mapped['User'] = relationship(back_populates='customer_orders')
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey('user.id'), nullable=False)
-    order_status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.OPEN, nullable=False)
+    order_status: Mapped[OrderStatus] = mapped_column(default=OrderStatus.TRANSMITTED, nullable=False)
 
     def __repr__(self):
         return "Order(id='%s', order_datetime='%s' beverages='%s', pizzas='%s', user='%s', \

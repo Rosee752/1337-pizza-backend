@@ -15,7 +15,6 @@ class PizzaTypeBaseSchema(BaseModel):
 
 class PizzaTypeCreateSchema(PizzaTypeBaseSchema):
     dough_id: uuid.UUID
-    sauce_id: uuid.UUID
 
 
 class PizzaTypeSchema(PizzaTypeBaseSchema):

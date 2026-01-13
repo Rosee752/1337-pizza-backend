@@ -20,8 +20,3 @@ variables:
   dough_description: "Test Dough"
   dough_stock: 10
 
-  sauce_name: "Tomato Basil"
-  sauce_price: 0.50
-  sauce_description: "Fresh Tomatoes"
-  sauce_stock: 20
-  sauce_spiciness: "LIGHT"
