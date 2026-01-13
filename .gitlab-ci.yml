@@ -110,8 +110,9 @@ integration_testing:
   before_script:
     - PYTHONPATH=. alembic upgrade head
   script:
-    - pip list | grep httpx
-    - PYTHONPATH=. pytest -x --junitxml=report_integration_tests.xml --cov=app --cov-config=.coveragerc --cov-report=xml:integration_coverage.xml tests/integration/
+      - PYTHONPATH=. alembic upgrade head
+      - pip install httpx  
+      - pytest -x --junitxml=report_integration_tests.xml --cov=app --cov-config=.coveragerc --cov-report=xml:integration_coverage.xml tests/integration/
   allow_failure: false
   rules:
     - if: $CI_COMMIT_BRANCH                            # branch pipelines
