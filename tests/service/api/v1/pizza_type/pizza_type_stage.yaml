@@ -41,3 +41,4 @@ stages:
       method: DELETE
     response:
       status_code: 204
+

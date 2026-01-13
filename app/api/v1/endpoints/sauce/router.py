@@ -113,3 +113,4 @@ def delete_sauce(
     sauce_crud.delete_sauce_by_id(sauce_id, db)
     logging.info('the sauce with id: {} deleted\n'.format(sauce_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+

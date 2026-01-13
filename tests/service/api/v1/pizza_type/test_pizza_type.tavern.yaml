@@ -308,3 +308,9 @@ stages:
     response:
       status_code: 204
 
+  - name: Delete sauce with id
+    request:
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
+      method: DELETE
+    response:
+      status_code: 204
