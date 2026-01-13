@@ -7,6 +7,7 @@ includes:
   - !include ../../order/order_stage.yaml
   - !include ../../pizza_type/pizza_type_stage.yaml
   - !include ../../users/user_stage.yaml
+  - !include ../../sauce/sauce_stage.yaml
 
 stages:
 #-------------------Create Order------------------------
@@ -38,6 +39,9 @@ stages:
       save:
         json:
           dough_id: id
+
+  - type: ref
+    id: create_sauce
 
   #Create pizza_type
   - type: ref
@@ -154,3 +158,6 @@ stages:
       method: DELETE
     response:
       status_code: 204
+
+  - type: ref
+    id: delete_sauce

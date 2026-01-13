@@ -12,8 +12,7 @@ import app.api.v1.endpoints.user.crud as user_crud
 import app.api.v1.endpoints.order.crud as order_crud
 from app.api.v1.endpoints.beverage.router import HTTP_ERROR
 from app.api.v1.endpoints.order.stock_logic import stock_beverage_crud
-# New Service Import
-from app.api.v1.services import stock_service
+from app.api.v1.endpoints.order.stock_logic import stock_ingredients_crud
 from app.api.v1.endpoints.order.schemas \
     import OrderSchema, PizzaCreateSchema, JoinedPizzaPizzaTypeSchema, \
     PizzaWithoutPizzaTypeSchema, OrderBeverageQuantityCreateSchema, JoinedOrderBeverageQuantitySchema, \
@@ -64,18 +63,17 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
     # Copy Pizzas
     for pizza in copy_order.pizzas:
         pizza_type = pizza.pizza_type
-        # FIX: Use new stock service
-        try:
-            stock_service.validate_and_reduce_ingredients(pizza_type, db)
-            logging.info(f'reduced stock for pizza: {pizza_type} including sauce\n')
-        except HTTPException as e:
-            logging.fatal(f'stock for pizza type {pizza_type} is not available. Error: {e.detail}'
+        if not stock_ingredients_crud.ingredients_are_available(pizza_type):
+            # Not enough Stock
+            logging.fatal(f'stock for pizza type {pizza_type} is not available.'
                           f' Order with id: {new_order.id} will be deleted\n')
             order_crud.delete_order_by_id(new_order.id, db)
-            raise e
+            raise HTTPException(status_code=409, detail='Conflict')
 
         order_crud.add_pizza_to_order(new_order, pizza_type, db)
         logging.info(f'added pizza: {pizza_type} to order with id: {new_order.id}\n')
+        stock_ingredients_crud.reduce_stock_of_ingredients(pizza_type, db)
+        logging.info(f'reduced stock for pizza: {pizza_type}\n')
 
     # Copy Beverages
     for beverage_quantity in copy_order.beverages:
@@ -94,9 +92,8 @@ def create_order(order: OrderCreateSchema, db: Session = Depends(get_db),
 
     return new_order
 
-
-@router.get('', status_code=status.HTTP_200_OK, response_model=List[OrderSchema], tags=['order'])
-def get_orders_by_status(statuses: Optional[List[OrderStatus]] = Query(None), db: Session = Depends(get_db)):
+@router.get('',status_code=status.HTTP_200_OK,response_model=List[OrderSchema],tags=['order'])
+def get_orders_by_status(statuses: Optional[List[OrderStatus]] = Query(None),db: Session = Depends(get_db)):
     if statuses is None:
         orders = order_crud.get_all_orders(db)
         return orders
@@ -106,7 +103,6 @@ def get_orders_by_status(statuses: Optional[List[OrderStatus]] = Query(None), db
                         f' but could not find any orders\n')
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
     return orders
-
 
 @router.get('/{order_id}', response_model=OrderSchema, tags=['order'])
 def get_order(
@@ -132,10 +128,8 @@ def delete_order(
     ordered_pizzas = order.pizzas
     if ordered_pizzas:
         for pizza in ordered_pizzas:
-            # FIX: Use new stock service to Increase Stock
-            stock_service.increase_stock_of_ingredients(pizza.pizza_type, db)
+            stock_ingredients_crud.increase_stock_of_ingredients(pizza.pizza_type, db)
             logging.info(f'pizza with id:{pizza.id} deleted. Stock for pizza type: {pizza.pizza_type} increased\n')
-
     order_beverages = order_crud.get_joined_beverage_quantities_by_order(order_id, db)
     if order_beverages:
         for order_beverage in order_beverages:
@@ -163,15 +157,11 @@ def add_pizza_to_order(
         logging.fatal(f'tried to update order with id: {order_id}.'
                       f' but could not find pizza type:{schema.pizza_type_id}\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
-
-    # FIX: Use new stock service
-    try:
-        stock_service.validate_and_reduce_ingredients(pizza_type, db)
-    except HTTPException:
+    if not stock_ingredients_crud.ingredients_are_available(pizza_type):
         logging.fatal(f'tried to update order with id: {order_id}.'
                       f' but ingredients for pizza type: {pizza_type} are not available\n')
         return Response(status_code=status.HTTP_409_CONFLICT)
-
+    stock_ingredients_crud.reduce_stock_of_ingredients(pizza_type, db)
     pizza = order_crud.add_pizza_to_order(order, pizza_type, db)
     logging.info(f'pizza with id: {pizza.id} was successfully added to order: {order_id}\n')
     return pizza
@@ -208,8 +198,7 @@ def delete_pizza_from_order(
                       f' but could not find such pizza\n')
         return Response(status_code=status.HTTP_404_NOT_FOUND)
 
-    # FIX: Use new stock service to Increase Stock, using pizza_entity.pizza_type
-    stock_service.increase_stock_of_ingredients(pizza_entity.pizza_type, db)
+    stock_ingredients_crud.increase_stock_of_ingredients(pizza_entity.pizza_type, db)
     logging.info(f'pizza with id: {pizza.id} will be deleted from order: {order_id} so stock got increased\n')
 
     if not order_crud.delete_pizza_from_order(order, pizza.id, db):
@@ -352,6 +341,7 @@ def update_beverage_of_order(
         raise HTTPException(status_code=404, detail=HTTP_ERROR)
 
 
+
 @router.delete(
     '/{order_id}/beverages', response_model=None, tags=['order'],
 )
@@ -421,8 +411,7 @@ def get_user_of_order(
     user = order.user
     return user
 
-
-@router.put('/{order_id}', status_code=status.HTTP_204_NO_CONTENT, tags=['order'])
+@router.put('/{order_id}',status_code=status.HTTP_204_NO_CONTENT, tags=['order'])
 def update_order_status(
         order_id: uuid.UUID,
         order_status: OrderStatus = Query(..., description='The new status of the order'),

@@ -9,16 +9,16 @@ from sqlalchemy.orm import Session
 import app.api.v1.endpoints.dough.crud as dough_crud
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 import app.api.v1.endpoints.topping.crud as topping_crud
-import app.api.v1.endpoints.sauce.crud as sauce_crud
 from app.api.v1.endpoints.beverage.router import HTTP_ERROR
 from app.api.v1.endpoints.dough.schemas import DoughSchema
-from app.api.v1.endpoints.sauce.schemas import SauceSchema
 from app.api.v1.endpoints.pizza_type.schemas import \
     JoinedPizzaTypeQuantitySchema, \
     PizzaTypeSchema, \
     PizzaTypeCreateSchema, \
     PizzaTypeToppingQuantityCreateSchema
 from app.database.connection import SessionLocal
+import app.api.v1.endpoints.sauce.crud as sauce_crud
+from app.api.v1.endpoints.sauce.schemas import SauceSchema
 
 router = APIRouter()
 
@@ -76,10 +76,8 @@ def update_pizza_type(
 
     if pizza_type_found:
         if pizza_type_found.name == changed_pizza_type.name:
-
-            if pizza_type_found.sauce_id != changed_pizza_type.sauce_id:
-                if not sauce_crud.get_sauce_by_id(changed_pizza_type.sauce_id, db):
-                    raise HTTPException(status_code=404, detail='Sauce not found')
+            if not sauce_crud.get_sauce_by_id(changed_pizza_type.sauce_id, db):
+                raise HTTPException(status_code=404, detail='Sauce not found')
 
             pizza_type_crud.update_pizza_type(pizza_type_found, changed_pizza_type, db)
             log_message = (
@@ -238,3 +236,4 @@ def get_pizza_type_sauce(
     sauce = pizza_type.sauce
 
     return sauce
+

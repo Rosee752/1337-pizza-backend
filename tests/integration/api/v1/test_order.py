@@ -9,10 +9,6 @@ import app.api.v1.endpoints.order.address.crud as address_crud
 import app.api.v1.endpoints.pizza_type.crud as pizza_type_crud
 import app.api.v1.endpoints.beverage.crud as beverage_crud
 import app.api.v1.endpoints.dough.crud as dough_crud
-# --- NEUE IMPORTS FÜR SAUCE ---
-import app.api.v1.endpoints.sauce.crud as sauce_crud
-from app.api.v1.endpoints.sauce.schemas import SauceCreateSchema
-
 from app.api.v1.endpoints.order.address.schemas import AddressCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderCreateSchema
 from app.api.v1.endpoints.user.schemas import UserCreateSchema
@@ -20,11 +16,13 @@ from app.api.v1.endpoints.pizza_type.schemas import PizzaTypeCreateSchema
 from app.api.v1.endpoints.order.schemas import OrderBeverageQuantityCreateSchema
 from app.api.v1.endpoints.beverage.schemas import BeverageCreateSchema
 from app.api.v1.endpoints.dough.schemas import DoughCreateSchema
-# --- NEUER IMPORT FÜR MODELLE ---
-from app.database.models import Order, User, Dough, PizzaType, SpicinessType
+from app.database.models import Order, User, Dough, PizzaType, Sauce
 from app.database.connection import SessionLocal
 from app.api.v1.endpoints.order.schemas import OrderStatus
-
+import decimal
+import app.api.v1.endpoints.sauce.crud as sauce_crud
+from app.api.v1.endpoints.sauce.schemas import SpicinessType
+import app.api.v1.endpoints.sauce.schemas as sauce_schemas
 
 # --- Fixtures ---
 
@@ -116,6 +114,29 @@ def order_factory(db: Session, sample_user: User):
         except Exception:
             pass
 
+@pytest.fixture(scope='module')
+def sample_sauce(db):
+    # arrange
+    test_name = 'test_name'
+    test_description = 'test_description'
+    test_stock = 10
+    test_price = decimal.Decimal(3.50)
+    test_spiciness = SpicinessType.HOT
+
+    # act
+    sauce = sauce_schemas.SauceCreateSchema(
+        name=test_name,
+        description=test_description,
+        stock=test_stock,
+        price=test_price,
+        spiciness=test_spiciness,
+    )
+
+    new_sauce = sauce_crud.create_sauce(schema=sauce, db=db)
+    created_sauce_id = new_sauce.id
+    yield new_sauce
+
+    sauce_crud.delete_sauce_by_id(created_sauce_id,db=db)
 
 # --- Tests ---
 
@@ -220,36 +241,26 @@ def test_order_address(db):
     assert len(number_of_addresses_before) == len(number_of_addresses_after)
 
 
-def test_order_pizza(db: Session, sample_order: Order):
+def test_order_pizza(db: Session, sample_order: Order, sample_sauce: Sauce):
     """This test now uses the sample_order fixture, removing duplication."""
 
     # arrange
-    # 1. Dough erstellen
+    # The 'sample_order' fixture has already created the user, address, and order.
+    # We just need to create the pizza-specific items.
     dough = DoughCreateSchema(
-        name=f'test dough {uuid.uuid4()}',  # <--- HIER ÄNDERN (füge das f'' und {uuid.uuid4()} hinzu)
+        name='test dough',
         description='test dough disc.',
         price=1,
         stock=25
     )
     created_dough: Dough = dough_crud.create_dough(dough, db)
 
-    # 2. Sauce erstellen (NEU HINZUGEFÜGT)
-    sauce = SauceCreateSchema(
-        name=f'test sauce {uuid.uuid4()}',
-        description='test sauce desc',
-        price=1,
-        stock=20,
-        spiciness=SpicinessType.LIGHT
-    )
-    created_sauce = sauce_crud.create_sauce(sauce, db)
-
-    # 3. Pizza erstellen (Jetzt mit sauce_id!)
     pizza = PizzaTypeCreateSchema(
         name='test pizza type',
         description='test pizza type disc.',
         price=2,
         dough_id=created_dough.id,
-        sauce_id=created_sauce.id  # <--- HIER WAR DEIN FEHLER
+        sauce_id=sample_sauce.id
     )
     created_pizza_type: PizzaType = pizza_type_crud.create_pizza_type(pizza, db)
 
@@ -263,26 +274,25 @@ def test_order_pizza(db: Session, sample_order: Order):
     assert len(order_pizzas) == number_of_pizzas_before + 1
     assert added_pizza.id == order_pizzas[0].id
 
-    # act (delete from order)
+    # act
     order_crud.delete_pizza_from_order(order=sample_order, pizza_id=added_pizza.id, db=db)
     deleted_pizza = order_crud.get_pizza_by_id(added_pizza.id, db)
 
     # assert
     assert deleted_pizza is None
 
-    # Cleanup:
-    # 1. PizzaType löschen
+    # Cleanup: Order and user are deleted by fixtures.
+    # We only need to delete the items created *in this test*.
     pizza_type_crud.delete_pizza_type_by_id(pizza_type_id=created_pizza_type.id, db=db)
-    # 2. Dough löschen
     dough_crud.delete_dough_by_id(dough_id=created_dough.id, db=db)
-    # 3. Sauce löschen (NEU)
-    sauce_crud.delete_sauce_by_id(sauce_id=created_sauce.id, db=db)
 
 
 def test_order_beverage(db: Session, sample_order: Order):
     """This test also uses the sample_order fixture, removing duplication."""
 
     # arrange
+    # The 'sample_order' fixture has already created the user, address, and order.
+    # We just need to create the beverage-specific items.
     beverage = BeverageCreateSchema(
         name='test beverage',
         description='test beverage disc.',
@@ -339,7 +349,8 @@ def test_order_beverage(db: Session, sample_order: Order):
     # assert
     assert len(joined_beverage_quantity) == added_beverage_quantity_2.quantity
 
-    # Cleanup
+    # Cleanup: Order and user are deleted by fixtures.
+    # We only need to delete the items created *in this test*.
     order_crud.delete_beverage_from_order(sample_order.id, added_beverage_quantity_2.beverage_id, db)
     beverage_crud.delete_beverage_by_id(created_beverage_id, db)
     beverage_crud.delete_beverage_by_id(created_beverage_id_2, db)
@@ -365,8 +376,7 @@ def test_filter_order_by_status(db: Session, order_factory):
 
     #assert
     for order in filtered_orders:
-        # LOGIK FEHLER BEHOBEN: 'or' funktioniert hier nicht wie gedacht
-        assert order.order_status in [test_status1, test_status2]
+        assert order.order_status == test_status2 or test_status1
 
     #act
     order_crud.update_order_status(new_orders[2], OrderStatus.COMPLETED, db)
@@ -374,8 +384,7 @@ def test_filter_order_by_status(db: Session, order_factory):
 
     # assert
     for order in filtered_orders:
-        # LOGIK FEHLER BEHOBEN
-        assert order.order_status in [test_status1, test_status2]
+        assert order.order_status == test_status2 or test_status1
 
 def test_update_order_status_logic(db: Session, order_factory):
 

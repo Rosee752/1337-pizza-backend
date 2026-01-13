@@ -38,9 +38,9 @@ stages:
             sauce_id: id
 
   - id: delete_sauce
-    name: Delete beverage with id
+    name: Delete sauce with id
     request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauce/{sauce_id}
+      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
       method: DELETE
     response:
       status_code: 204

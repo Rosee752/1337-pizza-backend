@@ -8,6 +8,7 @@ includes:
   - !include ../dough/dough_stage.yaml
   - !include ../pizza_type/pizza_type_stage.yaml
   - !include ../users/user_stage.yaml
+  - !include ../sauce/sauce_stage.yaml
 
 stages:
   #Create User
@@ -22,21 +23,8 @@ stages:
   - type: ref
     id: create_dough
 
-  - name: Create a new sauce
-    request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces
-      json: &sauce
-        name: "{sauce_name:s}"
-        price: !float "{sauce_price:f}"
-        description: "{sauce_description}"
-        stock: !int "{sauce_stock:d}"
-        spiciness: "{sauce_spiciness}"
-      method: POST
-    response:
-      status_code: 201
-      save:
-        json:
-          sauce_id: id
+  - type: ref
+    id: create_sauce
 
   #Create pizza_type
   - type: ref
@@ -149,13 +137,6 @@ stages:
   - type: ref
     id: delete_pizza_type
 
-  - name: Delete sauce
-    request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces/{sauce_id}
-      method: DELETE
-    response:
-      status_code: 204
-
   #Delete Dough
   - type: ref
     id: delete_dough
@@ -163,3 +144,6 @@ stages:
   #Delete user
   - type: ref
     id: delete_user
+
+  - type: ref
+    id: delete_sauce

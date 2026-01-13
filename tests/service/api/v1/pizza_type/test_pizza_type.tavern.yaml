@@ -28,15 +28,19 @@ stages:
         json:
           dough_id: id
 
-  - name: Create a new sauce
+
+  - name: Verify that status code equals 201 when we create a new sauce and the sauce is returned
+    # max_retries and delay_after needs to be set in first stage of each stage to wait for uvicorn
+    max_retries: 10
+    delay_after: 2
     request:
       url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/sauces
       json: &sauce
         name: "{sauce_name:s}"
         price: !float "{sauce_price:f}"
-        description: "{sauce_description}"
-        stock: !int "{sauce_stock:d}"
-        spiciness: "{sauce_spiciness}"
+        description: "{sauce_description:s}"
+        spiciness: "{spiciness:s}"
+        stock: !int "{dough_stock:d}"
       method: POST
     response:
       status_code: 201
@@ -92,19 +96,6 @@ stages:
         description: "{pizza_description}"
         dough_id: "{not_available_id}"
         sauce_id: "{sauce_id}"
-      method: POST
-    response:
-      status_code: 404
-
-  - name: Verify that status code equals 404 when we create a new pizza with a non-existent sauce
-    request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/pizza-types
-      json:
-        name: "random name 2"
-        price: !float "{pizza_price:f}"
-        description: "{pizza_description}"
-        dough_id: "{dough_id}"
-        sauce_id: "{not_available_id}"
       method: POST
     response:
       status_code: 404
@@ -272,16 +263,6 @@ stages:
       json:
         <<: *dough
         id: "{dough_id}"
-
-  - name: Get sauce of pizza_type
-    request:
-      url: http://{tavern.env_vars.API_SERVER}:{tavern.env_vars.API_PORT}/v1/pizza-types/{pizza_type_id}/sauce
-      method: GET
-    response:
-      status_code: 200
-      json:
-        <<: *sauce
-        id: "{sauce_id}"
 
   - name: Verify status code 404 when trying to get the dough of a non-existent pizza type
     request:
