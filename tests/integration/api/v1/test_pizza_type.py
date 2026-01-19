@@ -85,3 +85,91 @@ def test_pizza_type_create_read_delete(db):
     # Assert: Correct pizza_type was deleted from database
     deleted_pizza_type = pizza_type_crud.get_pizza_type_by_id(created_pizza_type_id, db)
     assert deleted_pizza_type is None
+
+
+def test_read_pizza_type_by_name(db):
+    # arrange
+    unique_name = "Unique Search Name"
+
+    # Create dummy dough/sauce first
+    dough = dough_crud.create_dough(DoughCreateSchema(name='Dough2', price=1, description='desc', stock=10), db)
+    sauce = sauce_crud.create_sauce(
+        SauceCreateSchema(name='Sauce2', price=1, description='desc', spiciness=SpicinessType.LIGHT, stock=10), db)
+
+    # Create the pizza type
+    schema = PizzaTypeCreateSchema(
+        name=unique_name,
+        price=Decimal('12.50'),
+        description='Search me',
+        dough_id=dough.id,
+        sauce_id=sauce.id
+    )
+    created_pizza = pizza_type_crud.create_pizza_type(schema, db)
+
+    # act
+    found_pizza = pizza_type_crud.get_pizza_type_by_name(unique_name, db)
+
+    # assert
+    assert found_pizza.id == created_pizza.id
+    assert found_pizza.name == unique_name
+
+
+def test_update_pizza_type(db):
+    # arrange
+    dough = dough_crud.create_dough(DoughCreateSchema(name='Dough3', price=1, description='d', stock=10), db)
+    sauce = sauce_crud.create_sauce(
+        SauceCreateSchema(name='Sauce3', price=1, description='s', spiciness=SpicinessType.LIGHT, stock=10), db)
+
+    initial_schema = PizzaTypeCreateSchema(name='Old Name', price=Decimal('10.00'), description='Old',
+                                           dough_id=dough.id, sauce_id=sauce.id)
+    pizza = pizza_type_crud.create_pizza_type(initial_schema, db)
+
+    # Prepare changes
+    update_schema = PizzaTypeCreateSchema(
+        name='Updated Name',
+        price=Decimal('15.00'),  # Price change
+        description='Updated',
+        dough_id=dough.id,
+        sauce_id=sauce.id
+    )
+
+    # act
+
+    updated_pizza = pizza_type_crud.update_pizza_type(pizza, update_schema, db)
+
+    # assert
+    assert updated_pizza.name == 'Updated Name'
+    assert updated_pizza.price == Decimal('15.00')
+
+
+def test_ingredients_availability_logic(db):
+    # 1. SETUP: Create ingredients with LOW stock
+    dough = dough_crud.create_dough(DoughCreateSchema(name='LowStockDough', price=1, description='d', stock=5), db)
+    sauce = sauce_crud.create_sauce(
+        SauceCreateSchema(name='SauceOK', price=1, description='s', spiciness=SpicinessType.LIGHT, stock=100), db)
+
+    # Create the Pizza Type using these ingredients
+    pizza_schema = PizzaTypeCreateSchema(
+        name='Stock Check Pizza',
+        price=Decimal('10.00'),
+        description='Checking stock',
+        dough_id=dough.id,
+        sauce_id=sauce.id
+    )
+    pizza = pizza_type_crud.create_pizza_type(pizza_schema, db)
+
+    # 2. ACT & ASSERT: Try to order MORE than we have
+    is_available = pizza_type_crud.are_ingredients_available(
+        pizza_type_id=pizza.id,
+        quantity=10,
+        db=db
+    )
+    assert is_available is False
+
+    # 3. ACT & ASSERT:
+    is_available_success = pizza_type_crud.are_ingredients_available(
+        pizza_type_id=pizza.id,
+        quantity=2,
+        db=db
+    )
+    assert is_available_success is True
