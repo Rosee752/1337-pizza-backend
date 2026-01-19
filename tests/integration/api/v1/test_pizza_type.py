@@ -89,7 +89,7 @@ def test_pizza_type_create_read_delete(db):
 
 def test_read_pizza_type_by_name(db):
     # arrange
-    unique_name = "Unique Search Name"
+    unique_name = 'Unique Search Name'
 
     # Create dummy dough/sauce first
     dough = dough_crud.create_dough(DoughCreateSchema(name='Dough2', price=1, description='desc', stock=10), db)
