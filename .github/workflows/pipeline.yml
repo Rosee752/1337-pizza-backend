@@ -1,0 +1,153 @@
+name: 1337 Pizza Full SDLC Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual triggering (like GitLab manual jobs)
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  DEV_IMAGE: ghcr.io/${{ github.repository }}/dev-container
+  RELEASE_IMAGE: ghcr.io/${{ github.repository }}/release-container
+
+jobs:
+  # --- STAGE: COMMIT (Linting & Container Build) ---
+  build-dev-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Dev Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./infra/build_artifacts/development.dockerfile
+          push: true
+          tags: |
+            ${{ env.DEV_IMAGE }}:${{ github.sha }}
+            ${{ env.DEV_IMAGE }}:latest
+
+  lint-and-test:
+    needs: build-dev-image
+    runs-on: ubuntu-latest
+    # We use the container you just built as the environment!
+    container:
+      image: ghcr.io/${{ github.repository }}/dev-container:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    services:
+      db-dev:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: mysecretpassword
+          POSTGRES_DB: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Ruff Check
+        run: ruff check app/ tests/
+        continue-on-error: true
+
+      - name: Run Migrations and Integration Tests
+        env:
+          DATABASE_HOST: db-dev
+          DATABASE_PORT: 5432
+          DATABASE_USERNAME: postgres
+          DATABASE_PASSWORD: mysecretpassword
+          DATABASE_NAME: postgres
+        run: |
+          PYTHONPATH=. alembic upgrade head
+          PYTHONPATH=. pytest -x --junitxml=report_integration_tests.xml --cov=app --cov-config=.coveragerc --cov-report=xml:integration_coverage.xml tests/integration/
+
+      - name: Upload Test Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: integration_coverage.xml
+
+  sonarqube:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  # --- STAGE: ACCEPTANCE (Release & Staging) ---
+  create-release:
+    needs: sonarqube
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Release Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./infra/build_artifacts/release.dockerfile
+          push: true
+          tags: ${{ env.RELEASE_IMAGE }}:latest
+
+  deploy-staging:
+    needs: create-release
+    runs-on: ubuntu-latest
+    # This acts as your "manual" trigger in GitHub
+    environment: staging 
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBECONFIG_STAGING }} # You'll need to save your kubeconfig as a secret
+
+      - name: Deploy to K8s
+        run: |
+          sed -i "s|enter_release_containter_registry_url|${{ env.RELEASE_IMAGE }}:latest|g" infra/deployment/deployment-staging.yaml
+          kubectl apply -f infra/deployment/deployment-staging.yaml --namespace staging
+
+  # --- STAGE: RELEASE (Production) ---
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production # Requires manual approval in GitHub UI
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Prod
+        run: |
+          sed -i "s|enter_release_containter_registry_url|${{ env.RELEASE_IMAGE }}:latest|g" infra/deployment/deployment-production.yaml
+          kubectl apply -f infra/deployment/deployment-production.yaml --namespace production
