@@ -1,20 +1,50 @@
-# **1337 Pizza** - Pizza Delivery for Your *Nerdy* Needs
+# 1337 Pizza: Backend API Service 🍕💻
 
-**1337 Pizza** is a pizza delivery company, that has specialized on the needs of nerds.
-The unique selling propositions of **1337 Pizza** compared with their competitors are: 
-- 24/7 pizza delivery; ***you need it; we deliver it***
-- Any exotic pizza composition is possible; ***anything goes***
-- Pizza can be ordered hot or cold; ***we don't judge***
-- Orders can be placed through an API; ***talk API to us, baby***
+> **Pizza Delivery for Your Nerdy Needs** This repository contains the backend service and RESTful API for **1337 Pizza**, a conceptual pizza delivery company specialized for the needs of nerds. This service acts as the core engine, exposing API endpoints for front-end applications to consume. 
 
+*(Note: Front-end applications are out of scope for this repository and are handled by separate teams.)*
 
-## Project Overview
-This repository contains all development artifacts related to the backend service of the **1337 Pizza**-delivery. It exposes an API endpoints that can be used by front-end applications. For this repository, however, front-end applications are out of scope. They may be developed by other teams.
+---
 
+## 🚀 Unique Selling Propositions (USPs)
+* **24/7 Delivery:** You need it; we deliver it.
+* **Ultimate Customization:** Any exotic pizza composition is possible; anything goes.
+* **Temperature Agnostic:** Pizza can be ordered hot or cold; we don't judge.
+* **Developer First:** Orders can be placed through an API. *Talk API to us, baby.*
 
-## Folder Structure of this Repository
-The following is a brief description of the folder structure of this project:
-- **app** - service's source code
-- **doc** - all documentation of the project - [entrypoint](doc/README.md)
-- **infra** - all infrastructure artifacts
-- **test** - all tests 
+---
+
+## 🛠️ Engineering Practices & Architecture
+
+This project was developed simulating a full professional Software Development Life Cycle (SDLC), emphasizing high code quality, automated testing, and continuous integration.
+
+* **Methodology:** Agile / Scrum
+* **Architecture:** RESTful API Backend
+* **Quality Assurance:** * Comprehensive Unit and Service-level testing.
+  * Automated static code analysis and quality gating via **SonarQube**.
+* **DevOps:** Full CI/CD pipeline integration handling automated builds, testing, and deployment preparation.
+
+---
+
+## 📂 Repository Structure
+
+The project is organized into the following clear separation of concerns:
+
+* **`/app`** - The core service's source code and application logic.
+* **`/doc`** - All project documentation (Start here for architectural decisions and API specs).
+* **`/infra`** - Infrastructure artifacts, deployment configurations, and pipeline scripts.
+* **`/test`** - All automated test suites (Unit and Service tests).
+
+---
+
+## 🏁 Getting Started
+
+### Prerequisites
+* *(Add your required language/framework here, e.g., Java 17, Node.js 20, Python 3.10)*
+* *(Add database requirements here, e.g., PostgreSQL, MongoDB)*
+* Docker (Optional, for running infrastructure locally)
+
+### Installation & Running Locally
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/your-username/1337-pizza-backend.git](https://github.com/your-username/1337-pizza-backend.git)
